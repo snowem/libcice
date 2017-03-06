@@ -1,5 +1,5 @@
 # libcicero
-A implementation of ICE protocol, based on libnice. The aim of the project is to create pure C library, which can be easily integrated into applications. 
+An implementation of ICE Lite protocol, based on libnice. The aim of the project is to create pure C library, which can be easily integrated into applications. 
 
 TODO:
   + Support only udp, extension for tcp is needed.
