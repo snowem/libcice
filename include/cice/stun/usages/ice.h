@@ -52,7 +52,7 @@
  * to an incoming connectivity check request.
  */
 
-# include "stun/stunagent.h"
+# include "cice/stun/stunagent.h"
 
 # ifdef __cplusplus
 extern "C" {

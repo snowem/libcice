@@ -54,10 +54,11 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "cice/stun/debug.h"
+#include "cice/stun/stunmessage.h"
+#include "cice/stun/utils.h"
 #include "cice/types.h"
 #include "cice/utils.h"
-#include "stun/debug.h"
-#include "stun/stunmessage.h"
 
 int stun_message_init (StunMessage *msg, StunClass c, StunMethod m,
     const StunTransactionId id)
@@ -501,7 +502,7 @@ stun_message_append_xor_addr (StunMessage *msg, StunAttribute type,
   /* Must be big enough to hold any supported address: */
   struct sockaddr_storage tmpaddr;
 
-  HEXDUMP((char*)addr,sizeof(addr),"addr");
+  ICE_HEXDUMP((char*)addr,sizeof(addr),"addr");
 
   if ((size_t) addrlen > sizeof (tmpaddr))
     addrlen = sizeof (tmpaddr);

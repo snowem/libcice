@@ -47,9 +47,9 @@
 #include <sys/socket.h>
 #endif
 
-#include "stun/stunagent.h"
-#include "stun/debug.h"
-#include "turn.h"
+#include "cice/stun/debug.h"
+#include "cice/stun/stunagent.h"
+#include "cice/stun/usages/turn.h"
 
 #include <string.h>
 #include <stdlib.h>

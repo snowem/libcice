@@ -45,10 +45,11 @@
 #include "cice/utils.h"
 #include "cice/log.h"
 
-#include "stun/stunmessage.h"
-#include "stun/stunagent.h"
-#include "stun/stunhmac.h"
-#include "stun/stun5389.h"
+#include "cice/stun/stunmessage.h"
+#include "cice/stun/stunagent.h"
+#include "cice/stun/stunhmac.h"
+#include "cice/stun/stun5389.h"
+#include "cice/stun/utils.h"
 
 
 

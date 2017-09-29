@@ -37,7 +37,7 @@
 # include <config.h>
 #endif
 
-#include "rand.h"
+#include "cice/stun/rand.h"
 
 
 #ifdef _WIN32

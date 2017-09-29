@@ -47,11 +47,11 @@
 #include <unistd.h>
 #endif
 
-#include "timer.h"
-
 #include <time.h>
 
 #include <stdlib.h> /* div() */
+
+#include "cice/stun/usages/timer.h"
 
 /*
  * Clock used throughout the STUN code.

@@ -47,7 +47,8 @@
 #include <stdarg.h>
 #include <ctype.h>
 
-#include "utils.h"
+#include "cice/stun/utils.h"
+#include "cice/types.h"
 
 size_t stun_padding (size_t l)
 {
@@ -100,7 +101,7 @@ StunMessageReturn stun_xor_address (const StunMessage *msg,
 
   addr_ptr.addr = addr;
   
-  HEXDUMP((char*)addr,sizeof(addr),"xor");
+  ICE_HEXDUMP((char*)addr,sizeof(addr),"xor");
 
   switch (addr->ss_family)
   {

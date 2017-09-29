@@ -54,9 +54,9 @@
 #include "cice/types.h"
 #include "cice/utils.h"
 
-#include "stun/usages/bind.h"
-#include "stun/usages/timer.h"
-#include "stun/usages/turn.h"
+#include "cice/stun/usages/bind.h"
+#include "cice/stun/usages/timer.h"
+#include "cice/stun/usages/turn.h"
 
 static int 
 priv_timer_expired (struct timeval *timer, struct timeval *now)

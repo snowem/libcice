@@ -89,7 +89,7 @@ stun_recv_message(socket_t *sock, address_t* from, char *buf, int len) {
    } else {
       //2.2 handle other data
       //ICE_DEBUG("Handle non-stun message");
-      //HEXDUMP(buf,len,"msg");
+      //ICE_HEXDUMP(buf,len,"msg");
       if ( component->io_callback ) {
          //ICE_DEBUG("call user-defined callback");
          //janus_ice_cb_nice_recv
@@ -123,13 +123,13 @@ socket_udp_read_cb(evutil_socket_t fd, short what, void *ctx)
 
    ICE_DEBUG("Receive data, fd=%u, ip=%u, port=%u, recvlen: %ld", 
         fd, remaddr.sin_addr.s_addr, remaddr.sin_port, recvlen);
-   //HEXDUMP((char*)&remaddr,sizeof(remaddr),"ipaddr");
+   //ICE_HEXDUMP((char*)&remaddr,sizeof(remaddr),"ipaddr");
 
    if (recvlen <= 0) {
       ICE_ERROR("could not receive data, ret=%ld",recvlen);
       return;
    }   
-   //HEXDUMP(buf,recvlen,"data");
+   //ICE_HEXDUMP(buf,recvlen,"data");
 
    sock = (socket_t*)ctx;
    ICE_DEBUG("get udp socket, agent=%p,stream=%p,component=%p",
@@ -360,7 +360,7 @@ udp_socket_send(socket_t *sock, const address_t *to,
    //socket_send_messages
    //ICE_DEBUG("udp_socket_send, fd=%d",sock->fd);
    //print_address(to); 
-   //HEXDUMP(buf,len,"udp_send");
+   //ICE_HEXDUMP(buf,len,"udp_send");
 
    n = sendto(sock->fd, buf, len, 0, &to->s.addr, get_address_length(to));
    if ( n < 0 ) {

@@ -10,7 +10,7 @@ project(cice)            # this sets the project name
 # `sources` and `data`.
 #file(GLOB_RECURSE sources      *.c *.h stun/*.c stun/*.h stun/usages/*.h stun/usages/*.c )
 #file(GLOB sources_include include/*.h)
-file(GLOB sources_include include/cice/*.h)
+file(GLOB sources_include include/cice)
 file(GLOB sources_top *.c *.h)
 file(GLOB sources_stun stun/*.c stun/*.h)
 file(GLOB sources_stun_usage stun/usages/*.h stun/usages/*.c )
@@ -29,10 +29,10 @@ file(GLOB_RECURSE data resources/*)
 add_library(cice SHARED ${sources_top} ${sources_stun} ${sources_stun_usage})
 
 # Just for example add some compiler flags.
-target_compile_options(cice PUBLIC -g -Wall -I./)
+target_compile_options(cice PUBLIC -g -Wall)
 
 # This allows to include files relative to the root of the src directory with a <> pair
-target_include_directories(cice PUBLIC include .)
+target_include_directories(cice PUBLIC include)
 
 # This copies all resource files in the build directory.
 # We need this, because we want to work with paths relative to the executable.
@@ -129,9 +129,13 @@ target_link_libraries(cice PUBLIC
 # All install commands get the same destination. this allows us to use paths
 # relative to the executable.
 install(TARGETS cice DESTINATION lib)
+#install(
+#   FILES ${sources_include}
+#   DESTINATION include/cice
+#)
 install(
-   FILES ${sources_include}
-   DESTINATION include/cice
+  DIRECTORY ${sources_include}
+  DESTINATION include
 )
 #install(
 #   DIRECRORY ${CMAKE_SOURCE_DIR}/include
