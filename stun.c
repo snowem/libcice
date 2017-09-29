@@ -42,7 +42,7 @@
  * Jackie Dinh - 2016
  */
 
-#include "stun.h"
+#include "cice/stun.h"
 #include "stun/constants.h"
 #include "stun/stunmessage.h"
 #include "stun/utils.h"

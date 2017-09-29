@@ -42,8 +42,8 @@
  * Jackie Dinh - 2016
  */
 
-#include "stream.h"
-#include "types.h"
+#include "cice/stream.h"
+#include "cice/types.h"
 
 void 
 stream_initialize_credentials (stream_t *stream/*, NiceRNG *rng*/)

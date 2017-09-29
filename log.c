@@ -28,7 +28,6 @@
  * @(#)log.c
  */
 
-#include "log.h"
 
 #define _WITH_DPRINTF
 #include <fcntl.h>
@@ -37,7 +36,8 @@
 #include <stdarg.h>
 #include <stdarg.h>
 
-#include "types.h"
+#include "cice/log.h"
+#include "cice/types.h"
 
 int g_verbose = 1;
 int g_log_fd = -1;

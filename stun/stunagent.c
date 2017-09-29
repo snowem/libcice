@@ -38,16 +38,18 @@
 # include <config.h>
 #endif
 
-#include "stunmessage.h"
-#include "stunagent.h"
-#include "stunhmac.h"
-#include "stun5389.h"
-#include "utils.h"
-#include "log.h"
-
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
+
+#include "cice/utils.h"
+#include "cice/log.h"
+
+#include "stun/stunmessage.h"
+#include "stun/stunagent.h"
+#include "stun/stunhmac.h"
+#include "stun/stun5389.h"
+
 
 
 static bool stun_agent_is_unknown (StunAgent *agent, uint16_t type);

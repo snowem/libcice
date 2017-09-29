@@ -42,13 +42,14 @@
  * Jackie Dinh - 2016
  */
 
-#include "interfaces.h"
 
 #include <ifaddrs.h>
 #include <netdb.h>
 #include <net/if.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+
+#include "cice/interfaces.h"
 
 static char *
 sockaddr_to_string(const struct sockaddr *addr)

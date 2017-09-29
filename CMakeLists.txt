@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0) # setting this is required
-project(cicero)            # this sets the project name
+project(cice)            # this sets the project name
 
 ###############################################################################
 ## file globbing ##############################################################
@@ -9,7 +9,8 @@ project(cicero)            # this sets the project name
 # invoked and put all files that match the pattern in the variables 
 # `sources` and `data`.
 #file(GLOB_RECURSE sources      *.c *.h stun/*.c stun/*.h stun/usages/*.h stun/usages/*.c )
-file(GLOB sources_include include/*.h)
+#file(GLOB sources_include include/*.h)
+file(GLOB sources_include include/cice/*.h)
 file(GLOB sources_top *.c *.h)
 file(GLOB sources_stun stun/*.c stun/*.h)
 file(GLOB sources_stun_usage stun/usages/*.h stun/usages/*.c )
@@ -25,13 +26,13 @@ file(GLOB_RECURSE data resources/*)
 # The data is just added to the executable, because in some IDEs (QtCreator) 
 # files are invisible when they are not explicitly part of the project.
 #add_executable(example ${sources} ${data})
-add_library(cicero SHARED ${sources_top} ${sources_stun} ${sources_stun_usage})
+add_library(cice SHARED ${sources_top} ${sources_stun} ${sources_stun_usage})
 
 # Just for example add some compiler flags.
-target_compile_options(cicero PUBLIC -g -Wall -I./)
+target_compile_options(cice PUBLIC -g -Wall -I./)
 
 # This allows to include files relative to the root of the src directory with a <> pair
-target_include_directories(cicero PUBLIC include .)
+target_include_directories(cice PUBLIC include .)
 
 # This copies all resource files in the build directory.
 # We need this, because we want to work with paths relative to the executable.
@@ -83,8 +84,7 @@ mark_as_advanced(EVENT_INCLUDE_DIR EVENT_LIBRARY)
 # that we need to link into the program.
 #find_package(Boost 1.36.0 COMPONENTS filesystem system REQUIRED)
 
-target_link_libraries(cicero PUBLIC
-  #${Boost_LIBRARIES}
+target_link_libraries(cice PUBLIC
   ${EVENT_LIBRARY}
   # here you can add any library dependencies
 )
@@ -128,10 +128,10 @@ target_link_libraries(cicero PUBLIC
 
 # All install commands get the same destination. this allows us to use paths
 # relative to the executable.
-install(TARGETS cicero DESTINATION lib)
+install(TARGETS cice DESTINATION lib)
 install(
    FILES ${sources_include}
-   DESTINATION include/cicero
+   DESTINATION include/cice
 )
 #install(
 #   DIRECRORY ${CMAKE_SOURCE_DIR}/include
@@ -148,7 +148,7 @@ install(
 # there are a lot more variables you can set, and some
 # you need to set for some package types, but we want to
 # be minimal here.
-set(CPACK_PACKAGE_NAME "libcicero")
+set(CPACK_PACKAGE_NAME "libcice")
 set(CPACK_PACKAGE_VERSION "1.0.0")
 
 # We don't want to split our program up into several incomplete pieces.
