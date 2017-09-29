@@ -48,10 +48,10 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "stun5389.h"
-#include "stuncrc32.h"
-#include "stunmessage.h"
-#include "types.h"
+#include "stun/stun5389.h"
+#include "stun/stuncrc32.h"
+#include "stun/stunmessage.h"
+#include "cice/types.h"
 
 
 static const char utf8_skip_data[256] = {

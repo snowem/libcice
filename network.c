@@ -42,7 +42,6 @@
  * Jackie Dinh - 2016
  */
 
-#include "network.h"
 
 #include <errno.h>
 #include <unistd.h>
@@ -52,9 +51,10 @@
 #include <event2/bufferevent.h>
 #include <event2/buffer.h>
 
-#include "address.h"
-#include "agent.h"
-#include "stun.h"
+#include "cice/address.h"
+#include "cice/agent.h"
+#include "cice/network.h"
+#include "cice/stun.h"
 
 int
 stun_recv_message(socket_t *sock, address_t* from, char *buf, int len) {

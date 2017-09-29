@@ -42,17 +42,17 @@
  * Jackie Dinh - 2016
  */
 
-#include "conncheck.h"
 
 #include <sys/time.h>
 
-#include "agent.h"
-#include "base64.h"
-#include "component.h"
-#include "list_sort.h"
-#include "network.h"
-#include "types.h"
-#include "utils.h"
+#include "cice/agent.h"
+#include "cice/base64.h"
+#include "cice/component.h"
+#include "cice/conncheck.h"
+#include "cice/list_sort.h"
+#include "cice/network.h"
+#include "cice/types.h"
+#include "cice/utils.h"
 
 #include "stun/usages/bind.h"
 #include "stun/usages/timer.h"

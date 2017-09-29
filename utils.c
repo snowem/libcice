@@ -28,7 +28,7 @@
  * @(#)utils.h
  */
 
-#include "utils.h"
+#include "cice/utils.h"
 
 /* resolve seconds carry */
 static inline void update_tv(struct timeval *t1)

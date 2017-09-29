@@ -54,10 +54,10 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "debug.h"
-#include "stunmessage.h"
-#include "types.h"
-#include "utils.h"
+#include "cice/types.h"
+#include "cice/utils.h"
+#include "stun/debug.h"
+#include "stun/stunmessage.h"
 
 int stun_message_init (StunMessage *msg, StunClass c, StunMethod m,
     const StunTransactionId id)

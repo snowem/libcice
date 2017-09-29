@@ -42,7 +42,6 @@
  * Jackie Dinh - 2016
  */
 
-#include "agent.h"
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -51,10 +50,11 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "interfaces.h"
-#include "discovery.h"
-#include "candidate.h"
-#include "network.h"
+#include "cice/agent.h"
+#include "cice/candidate.h"
+#include "cice/discovery.h"
+#include "cice/interfaces.h"
+#include "cice/network.h"
 #include "stun/stunagent.h"
 
 static const char *

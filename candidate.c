@@ -42,7 +42,7 @@
  * Jackie Dinh - 2016
  */
 
-#include "candidate.h"
+#include "cice/candidate.h"
 
 candidate_t *
 candidate_new(IceCandidateType type)

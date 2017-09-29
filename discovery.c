@@ -42,14 +42,13 @@
  * Jackie Dinh - 2016
  */
 
-#include "discovery.h"
-
 #include <assert.h>
 
-#include "agent.h"
-#include "base64.h"
-#include "candidate.h"
-#include "network.h"
+#include "cice/agent.h"
+#include "cice/base64.h"
+#include "cice/candidate.h"
+#include "cice/discovery.h"
+#include "cice/network.h"
 
 /* From RFC 5245 section 4.1.3:
  *

@@ -1,10 +1,8 @@
-
-#include "list_sort.h"
-
 #include <string.h>
 #include <stdint.h>
 
-#include "list.h"
+#include "cice/list.h"
+#include "cice/list_sort.h"
 
 #define MAX_LIST_LENGTH_BITS 20
 

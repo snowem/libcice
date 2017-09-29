@@ -53,12 +53,12 @@
 #endif
 
 
-#include "stunagent.h"
-#include "utils.h"
+#include "cice/utils.h"
+#include "stun/stunagent.h"
 #include "stun/debug.h"
 
 /** ICE connectivity checks **/
-#include "ice.h"
+#include "stun/usages/ice.h"
 
 
 size_t

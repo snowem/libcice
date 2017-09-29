@@ -42,9 +42,10 @@
  * Jackie Dinh - 2016
  */
 
-#include "address.h"
 
 #include <arpa/inet.h>
+
+#include "cice/address.h"
 
 address_t*
 address_new(void) {

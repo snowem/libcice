@@ -43,8 +43,8 @@
  */
 
 
-#include "component.h"
-#include "agent.h"
+#include "cice/component.h"
+#include "cice/agent.h"
 
 void
 incoming_check_free(incoming_check_t *icheck)
