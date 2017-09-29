@@ -43,7 +43,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include "debug.h"
+#include "cice/stun/debug.h"
 
 
 static int debug_enabled = 1;

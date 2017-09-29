@@ -12,8 +12,9 @@
  * See README and COPYING for more details.
  */
 
-#include "md5.h"
 #include <string.h>
+
+#include "cice/stun/md5.h"
 
 /* ===== start - public domain MD5 implementation ===== */
 /*

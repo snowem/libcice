@@ -54,11 +54,11 @@
 
 
 #include "cice/utils.h"
-#include "stun/stunagent.h"
-#include "stun/debug.h"
+#include "cice/stun/stunagent.h"
+#include "cice/stun/debug.h"
 
 /** ICE connectivity checks **/
-#include "stun/usages/ice.h"
+#include "cice/stun/usages/ice.h"
 
 
 size_t

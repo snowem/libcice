@@ -55,7 +55,7 @@
 #include "cice/discovery.h"
 #include "cice/interfaces.h"
 #include "cice/network.h"
-#include "stun/stunagent.h"
+#include "cice/stun/stunagent.h"
 
 static const char *
 _transport_to_string (IceCandidateTransport type) {

@@ -12,10 +12,10 @@
  * See README and COPYING for more details.
  */
 
-#include "sha1.h"
 
 #include <string.h>
 
+#include "cice/stun/sha1.h"
 
 /* ===== start - public domain SHA1 implementation ===== */
 

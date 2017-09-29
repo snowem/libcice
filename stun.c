@@ -43,9 +43,9 @@
  */
 
 #include "cice/stun.h"
-#include "stun/constants.h"
-#include "stun/stunmessage.h"
-#include "stun/utils.h"
+#include "cice/stun/constants.h"
+#include "cice/stun/stunmessage.h"
+#include "cice/stun/utils.h"
 
 size_t
 is_stun_message(uint8_t *buffer, int len, int has_padding) {

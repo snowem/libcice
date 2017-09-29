@@ -48,9 +48,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "stun/stun5389.h"
-#include "stun/stuncrc32.h"
-#include "stun/stunmessage.h"
+#include "cice/stun/stun5389.h"
+#include "cice/stun/stuncrc32.h"
+#include "cice/stun/stunmessage.h"
 #include "cice/types.h"
 
 

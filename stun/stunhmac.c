@@ -40,15 +40,15 @@
 # include <config.h>
 #endif
 
-#include "sha1.h"
-#include "md5.h"
-#include "rand.h"
-
-#include "stunmessage.h"
-#include "stunhmac.h"
-
 #include <string.h>
 #include <assert.h>
+
+#include "cice/stun/sha1.h"
+#include "cice/stun/md5.h"
+#include "cice/stun/rand.h"
+
+#include "cice/stun/stunmessage.h"
+#include "cice/stun/stunhmac.h"
 
 void stun_sha1 (const uint8_t *msg, size_t len, size_t msg_len, uint8_t *sha,
     const void *key, size_t keylen, int padding)
