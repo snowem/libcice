@@ -3,5 +3,6 @@ An implementation of ICE Lite protocol, based on libnice. The aim of the project
 
 TODO:
   + Support only udp, extension for tcp is needed.
+  + Add support for reflexive candidate via stun requests.
   + It currently depends on libevent, but in the future select/epoll/kqueue should be added.
-  + plugin design to allow signal communication and capture webrtc stream.
+
