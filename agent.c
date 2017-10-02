@@ -417,7 +417,7 @@ ice_agent_gather_candidates (agent_t *agent, uint32_t stream_id) {
             while (res == HOST_CANDIDATE_CANT_CREATE_SOCKET) {
               ICE_DEBUG("trying to create host candidate, agent=%p, port=%u", agent, current_port);
               address_set_port (addr, current_port);
-              res =  discovery_add_local_host_candidate(agent, stream->id, cid,
+              res = discovery_add_local_host_candidate(agent, stream->id, cid,
                   addr, transport, &host_candidate);
               if (current_port > 0)
                  current_port++;
@@ -670,8 +670,13 @@ ice_agent_get_selected_pair (agent_t *agent, uint32_t stream_id,
   stream_t *stream;
   int ret = ICE_ERR;
 
-  if (stream_id < 1 || component_id < 1 || local == NULL || remote == NULL )
-     return ret;
+  ICE_DEBUG("getting selected pair, sid=%u, cid=%u, local=%p, remote=%p",
+            stream_id, component_id, local, remote);
+  if (stream_id < 1 || component_id < 1 || local == NULL || remote == NULL ) {
+    ICE_DEBUG("error in getting selected pair, sid=%u, cid=%u, local=%p, remote=%p",
+              stream_id, component_id, local, remote);
+    return ret;
+  }
 
   /* step: check that params specify an existing pair */
   ret = agent_find_component (agent, stream_id, component_id, &stream, &component);
@@ -680,11 +685,20 @@ ice_agent_get_selected_pair (agent_t *agent, uint32_t stream_id,
     goto done;
   }
 
+  ICE_DEBUG("error in getting selected pair, c=%p, local=%p, remote=%p",
+            component,
+            component->selected_pair.local,
+            component->selected_pair.remote);
+
   if (component->selected_pair.local && component->selected_pair.remote) {
     *local = component->selected_pair.local;
     *remote = component->selected_pair.remote;
+    ICE_DEBUG("get selected pair, local=%p, remote=%p", *local, *remote);
     ret = ICE_OK;
   }
+
+  ICE_DEBUG("error in getting selected pair, sid=%u, cid=%u, local=%p, remote=%p",
+            stream_id, component_id, local, remote);
 
 done:
   return ret;
