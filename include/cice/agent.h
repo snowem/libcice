@@ -156,6 +156,9 @@ ice_init();
 agent_t*
 ice_agent_new(struct event_base *base, IceCompatibility compat, int control_mode);
 
+void
+ice_agent_free(agent_t *agent);
+
 int
 ice_agent_add_stream (agent_t *agent, uint32_t n_components);
 

@@ -52,19 +52,18 @@ is_stun_message(uint8_t *buffer, int len, int has_padding) {
    int mlen;
 
    //ICE_DEBUG("STUN info, has_padding=%u",has_padding);
-
    if (len < 1  || buffer == NULL) {
-      ICE_DEBUG("STUN error: No data!");
+      ICE_ERROR("STUN error: No data!");
       return STUN_MESSAGE_BUFFER_INVALID;
    }
 
    if (buffer[0] >> 6) {
-      //ICE_ERROR("STUN error: RTP or other non-protocol packet!");
+      ICE_DEBUG("STUN error: RTP or other non-protocol packet!");
       return STUN_MESSAGE_BUFFER_INVALID; // RTP or other non-STUN packet
    }
 
    if (len < STUN_MESSAGE_LENGTH_POS + STUN_MESSAGE_LENGTH_LEN) {
-      //ICE_DEBUG("STUN error: Incomplete STUN message header!");
+      ICE_DEBUG("STUN error: Incomplete STUN message header!");
       return STUN_MESSAGE_BUFFER_INCOMPLETE;
    }
 
@@ -72,12 +71,12 @@ is_stun_message(uint8_t *buffer, int len, int has_padding) {
    mlen += STUN_MESSAGE_HEADER_LENGTH;
 
    if (has_padding && stun_padding (mlen)) {
-      //ICE_DEBUG("STUN error: Invalid message length: %u!", (unsigned)mlen);
+      ICE_DEBUG("STUN error: Invalid message length: %u!", (unsigned)mlen);
       return STUN_MESSAGE_BUFFER_INVALID; // wrong padding
    }
 
    if (len < mlen) {
-      ICE_ERROR("STUN error: Incomplete message: %u of %u bytes!",
+      ICE_DEBUG("STUN error: Incomplete message: %u of %u bytes!",
         (unsigned) len, (unsigned) mlen);
       return STUN_MESSAGE_BUFFER_INCOMPLETE; // partial message
    }

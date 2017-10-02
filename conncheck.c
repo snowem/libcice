@@ -409,9 +409,8 @@ print_list(candidate_check_pair_t *pair) {
    ICE_DEBUG("list info");
    list_for_each(pos,&pair->list) {
       candidate_check_pair_t *p = list_entry(pos,candidate_check_pair_t,list);
-      ICE_DEBUG("pair info, pair=%p, priority=%lu,local=%s,remote=%s,buffer=%p",
-            p, p->priority,p->local->foundation,
-            p->remote->foundation,p->stun_message.buffer);
+      ICE_ERROR("pair info, priority=%lu,foundation=%s:%s (%p)",
+            p->priority,p->local->foundation,p->remote->foundation, p->remote);
    }
    return;
 }
@@ -439,9 +438,12 @@ priv_limit_conn_check_list_size(candidate_check_pair_t *conncheck_list, uint32_t
      }
   }
 
-  if (cancelled > 0)
+  if (cancelled > 0) {
     ICE_DEBUG("Agent : Pruned %d candidates. Conncheck list has %d elements"
         " left. Maximum connchecks allowed : %d", cancelled, valid, upper_limit);
+  }
+
+  return;
 }
 
 
@@ -475,6 +477,7 @@ static void priv_add_new_check_pair (agent_t *agent, uint32_t stream_id, compone
     pair->sockptr = (socket_t*) remote->sockptr;
   else
     pair->sockptr = (socket_t*) local->sockptr;
+
   snprintf(pair->foundation, ICE_CANDIDATE_PAIR_MAX_FOUNDATION, 
           "%s:%s", local->foundation, remote->foundation);
 
@@ -482,17 +485,13 @@ static void priv_add_new_check_pair (agent_t *agent, uint32_t stream_id, compone
   pair->state = initial_state;
   pair->nominated = use_candidate;
   pair->controlling = agent->controlling_mode;
-
-  ICE_DEBUG("--------------------------- creating new pair, agent=%p, pair=%p, buffer=%p, state=%d", 
-            agent, pair, pair->stun_message.buffer, initial_state);
+  
+  ICE_DEBUG("creating new pair, pair=%p, prio=%lu, rfoundation=%s(%p), state=%d", 
+            pair, pair->priority, remote->foundation,remote, initial_state);
   list_add(&pair->list,&stream->connchecks.list);
-  list_sort(NULL,&stream->connchecks.list,conn_check_compare);
-
-  //list_for_each(i,&stream->connchecks.list) {
-  //  candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
-  //  ICE_DEBUG("buffer info, buffer=%p",p->stun_message.buffer);
-  //}
-  print_list(&stream->connchecks);
+  list_sort(NULL,&stream->connchecks.list,conn_check_compare); 
+  ICE_DEBUG("conncheck info, size=%u", list_size(&stream->connchecks.list));
+  //XXX: modify connchecks list inside list_for_each? check function 'conn_check_remote_candidates_set'
   
   ICE_DEBUG("added a new conncheck, agent=%p, pair=%p, foundation=%s, nominated=%u, stream_id=%u", 
          agent, pair, pair->foundation, pair->nominated, stream_id);
@@ -534,14 +533,10 @@ static void priv_conn_check_add_for_candidate_pair_matched(agent_t *agent,
     uint32_t stream_id, component_t *component, candidate_t *local,
     candidate_t *remote, IceCheckState initial_state)
 {
-  ICE_DEBUG("Adding check pair, agent=%p, local=%s, ltranpsort=%u, remote=%s, rtransport=%u", 
-        agent, local->foundation, local->transport, remote->foundation, remote->transport);
+  ICE_DEBUG("Adding check pair, agent=%p, local=%s, ltranpsort=%u, remote=%s(%p), rtransport=%u", 
+        agent, local->foundation, local->transport, remote->foundation, remote, remote->transport);
 
-  priv_add_new_check_pair(agent, stream_id, component, local, remote,
-      initial_state, 0);
-
-  ICE_DEBUG("component state, state=%d",component->state);
-
+  priv_add_new_check_pair(agent, stream_id, component, local, remote, initial_state, 0);
   if (component->state == ICE_COMPONENT_STATE_CONNECTED ||
       component->state == ICE_COMPONENT_STATE_READY) {
      agent_signal_component_state_change (agent,
@@ -554,19 +549,15 @@ static void priv_conn_check_add_for_candidate_pair_matched(agent_t *agent,
   return;
 }
 
-
 int
 conn_check_add_for_candidate_pair(agent_t *agent,
     uint32_t stream_id, component_t *component, 
     candidate_t *local, candidate_t *remote)
 {
-  int ret = 0;
+  int ret = ICE_OK;
 
   if ( local == NULL || remote == NULL )
      return ICE_ERR;
-
-  ICE_DEBUG("Checking pair, agent=%p, local=%s, remote=%s", agent,
-      local->foundation, remote->foundation);
 
   /* note: do not create pairs where the local candidate is
    *       a srv-reflexive (ICE 5.7.3. "Pruning the pairs" ID-9) */
@@ -616,11 +607,9 @@ conn_check_add_for_candidate(agent_t *agent, uint32_t stream_id,
 
    if ( remote == NULL || agent == NULL || component == NULL ) {
       ICE_ERROR("null pointers, agent=%p,component=%p,remote=%p",agent,component,remote);
-      return 0;
+      return ICE_ERR;
    }
 
-   ICE_DEBUG("candidate info, stream_id=%d",stream_id);
-   
    list_for_each(pos,&component->local_candidates.list) {
       candidate_t *local = list_entry(pos,candidate_t,list);
       ret = conn_check_add_for_candidate_pair(agent, stream_id, component, local, remote);
@@ -651,8 +640,9 @@ conn_check_add_for_local_candidate(agent_t *agent,
 
   list_for_each(pos,&component->remote_candidates.list) {
     candidate_t *remote = list_entry(pos,candidate_t,list);
-    ICE_DEBUG("check new pair, ret=%d",ret);
-    ret = conn_check_add_for_candidate_pair (agent, stream_id, component, local, remote);
+    ICE_ERROR("remote candidate info, stream_id=%d, foundation=%s(%p)",
+             stream_id, remote->foundation, remote);
+    ret = conn_check_add_for_candidate_pair(agent, stream_id, component, local, remote);
     ICE_DEBUG("check new pair, ret=%d",ret);
     if (ret == ICE_OK) {
       ++added;
@@ -680,11 +670,7 @@ priv_conn_keepalive_tick_unlocked(agent_t *agent)
   int ret = ICE_FALSE;
   size_t buf_len = 0;
 
-  ICE_DEBUG("priv_conn_keepalive_tick_unlocked");
-
-  //FIXME: free resouce properly, otherwise coredump occurs at p->local->transport.
-  return ICE_TRUE;
-
+  //ICE_ERROR("conn keepalive tick, keepalive_conncheck=%u",agent->keepalive_conncheck);
   // case 1: session established and media flowing
   //         (ref ICE sect 10 "Keepalives" ID-19) 
   list_for_each(i,&agent->streams.list) {
@@ -716,7 +702,7 @@ priv_conn_keepalive_tick_unlocked(agent_t *agent)
           {
             char tmpbuf[INET6_ADDRSTRLEN];
             address_to_string (&p->remote->addr, tmpbuf);
-            ICE_DEBUG("Agent %p : Keepalive STUN-CC REQ to '%s:%u', "
+            ICE_ERROR("Agent %p : Keepalive STUN-CC REQ to '%s:%u', "
                 "socket=%u (c-id:%u), username='%.*s' (%lu), "
                 "password='%.*s' (%lu), priority=%u.", agent,
                 tmpbuf, address_get_port (&p->remote->addr),
@@ -735,16 +721,17 @@ priv_conn_keepalive_tick_unlocked(agent_t *agent)
                 NULL,
                 agent_to_ice_compatibility (agent));
 
-            ICE_DEBUG("Agent %p: conncheck created %zd - %p",
+            ICE_ERROR("Agent %p: conncheck created %zd - %p",
                 agent, buf_len, p->keepalive.stun_message.buffer);
 
             if (buf_len > 0) {
               stun_timer_start (&p->keepalive.timer, STUN_TIMER_DEFAULT_TIMEOUT,
                   STUN_TIMER_DEFAULT_MAX_RETRANSMISSIONS);
 
-              agent->media_after_tick = FALSE;
+              agent->media_after_tick = ICE_FALSE;
 
               // send the conncheck
+              ICE_ERROR("conncheck keepalive");
               agent_socket_send((socket_t*)p->local->sockptr, &p->remote->addr,
                   (char *)p->keepalive.stun_buffer, buf_len);
 
@@ -823,7 +810,7 @@ priv_conn_keepalive_tick_unlocked(agent_t *agent)
   }
 
   if (errors) {
-    ICE_DEBUG("Agent %p : stopping keepalive timer", agent);
+    ICE_ERROR("Agent %p : stopping keepalive timer", agent);
     goto done;
   }
 
@@ -844,18 +831,17 @@ priv_update_selected_pair(agent_t *agent, component_t *component, candidate_chec
 {
    candidate_pair_t cpair;
 
-   ICE_DEBUG("priv_update_selected_pair, pair=%p", pair);
-
    if ( agent == NULL || component == NULL )
       return ICE_ERR;
        
-   if (pair->priority > component->selected_pair.priority &&
-       component_find_pair(component, agent, pair->local->foundation,
-       pair->remote->foundation, &cpair) == ICE_OK) {
-
-      ICE_DEBUG("Agent %p : changing SELECTED PAIR for component %u: %s:%s "
-            "(prio:%lu)", agent, component->id,
-            pair->local->foundation, pair->remote->foundation, pair->priority);
+   if (pair->priority > component->selected_pair.priority 
+       && component_find_pair(component, agent, pair->local->foundation,
+       pair->remote->foundation, &cpair) == ICE_OK ) {
+      
+      ICE_ERROR("changing SELECTED PAIR for component %u: %s:%s ,prio:%lu", 
+                component->id, pair->local->foundation, pair->remote->foundation, pair->priority);
+      print_candidate(cpair.local,"local peer");
+      print_candidate(cpair.remote,"remote peer");
 
       component_update_selected_pair(component, &cpair);
       priv_conn_keepalive_tick_unlocked(agent);
@@ -1001,8 +987,9 @@ priv_mark_pair_nominated(agent_t *agent, stream_t *stream,
       /* XXX: hmm, how to figure out to which local candidate the 
        *      check was sent to? let's mark all matching pairs
        *      as nominated instead */
-      ICE_DEBUG("checking pair nominated, foundation=%s,remote=%p,remotecand=%p", 
-             pair->foundation, pair->remote, remotecand);
+      ICE_DEBUG("checking pair nominated, foundation=%s,remote=%p,remotecand=%p, prio=%lu", 
+                pair->foundation, pair->remote, remotecand, pair->priority);
+      //ICE_ERROR("remote cand info, foundation=%s(%p)", pair->remote->foundation, pair->remote);
       if (pair->remote == remotecand) {
          ICE_DEBUG("marking pair as nominated, agent=%p, pair=%p, foundation=%s, state=%u", 
                agent, pair, pair->foundation, pair->state);
@@ -1037,7 +1024,8 @@ priv_schedule_triggered_check(agent_t *agent, stream_t *stream, component_t *com
   if ( remote_cand == NULL )
      return ICE_ERR;
 
-  ICE_DEBUG("trigger check, use_candidate=%u",use_candidate);
+  ICE_DEBUG("trigger check, use_candidate=%u, conncheck_list=%u",
+            use_candidate, list_size(&stream->connchecks.list));
 
   list_for_each(i,&stream->connchecks.list) {
       candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
@@ -1067,7 +1055,7 @@ priv_schedule_triggered_check(agent_t *agent, stream_t *stream, component_t *com
 	        */
 	       ICE_DEBUG("Agent %p : check already in progress, restarting the timer again?: %s ..", agent,
                  p->timer_restarted ? "no" : "yes");
-          ICE_DEBUG("FIXME: nice_socket_is_reliable");
+          /* FIXME: nice_socket_is_reliable */
 	       if (/*!nice_socket_is_reliable (p->sockptr) &&*/ !p->timer_restarted) {
 	         stun_timer_start (&p->timer, priv_compute_conncheck_timer (agent, stream),
                               STUN_TIMER_DEFAULT_MAX_RETRANSMISSIONS);
@@ -1076,7 +1064,7 @@ priv_schedule_triggered_check(agent_t *agent, stream_t *stream, component_t *com
 	     }
 	     else if (p->state == ICE_CHECK_SUCCEEDED ||
 		           p->state == ICE_CHECK_DISCOVERED) {
-          ICE_DEBUG("Agent %p : Skipping triggered check, already completed..", agent); 
+          ICE_DEBUG("Agent %p : Skipping triggered check, already completed", agent); 
           /* note: this is a bit unsure corner-case -- let's do the
            *   same state update as for processing responses to our own checks */
           priv_update_check_list_state_for_ready (agent, stream, component);
@@ -1112,7 +1100,7 @@ priv_schedule_triggered_check(agent_t *agent, stream_t *stream, component_t *com
   }
 
   if (i) {
-    ICE_DEBUG("Agent %p : Adding a triggered check to conn.check list (local=%p).", agent, local);
+    ICE_ERROR("Agent %p : Adding a triggered check to conn.check list (local=%p).", agent, local);
     priv_add_new_check_pair(agent, stream->id, component, 
           local, remote_cand, ICE_CHECK_WAITING, use_candidate);
     return ICE_TRUE;
@@ -1154,8 +1142,8 @@ priv_preprocess_conn_check_pending_data(agent_t *agent, stream_t *stream,
       ICE_DEBUG("compare, local_socket=%p, sockptr=%p",icheck->local_socket,pair->sockptr);
       if (address_equal(&icheck->from, &pair->remote->addr) &&
           icheck->local_socket == pair->sockptr) {
-         ICE_DEBUG("Updating stored early-icheck , agent=%p, pair=%p, check=%p, sid=%u, cid=%u", 
-               agent, pair, icheck, stream->id, component->id);
+         ICE_ERROR("Updating stored early-icheck , agent=%p, pair=%p, check=%p, sid=%u, cid=%u, use_candidate=%u", 
+               agent, pair, icheck, stream->id, component->id, icheck->use_candidate);
          if (icheck->use_candidate) {
 	         priv_mark_pair_nominated(agent, stream, component, pair->remote);
          }
@@ -1218,6 +1206,7 @@ conn_check_remote_candidates_set(agent_t *agent)
 
    list_for_each(i,&agent->streams.list) {
       stream_t *stream = list_entry(i,stream_t,list);
+      ICE_DEBUG("conncheck list, size=%u",list_size(&stream->connchecks.list));
       list_for_each(j,&stream->connchecks.list) {
          candidate_check_pair_t *pair = list_entry(j,candidate_check_pair_t,list);
          component_t *component = stream_find_component_by_id(stream, pair->component_id);
@@ -1226,7 +1215,7 @@ conn_check_remote_candidates_set(agent_t *agent)
          ICE_DEBUG("stream preprocess, sid=%u,cid=%u,local=%s,remote=%s",
                stream->id,component->id,pair->local->foundation,pair->remote->foundation);
 
-         /* performn delayed processing of spec steps section 7.2.1.4,
+         /* perform delayed processing of spec steps section 7.2.1.4,
           	and section 7.2.1.5 */
          priv_preprocess_conn_check_pending_data(agent, stream, component, pair);
 
@@ -1252,7 +1241,8 @@ conn_check_remote_candidates_set(agent_t *agent)
 
                candidate_t *local_candidate = NULL;
                candidate_t *remote_candidate = NULL;
-
+               
+               ICE_DEBUG("agent info, compatibility=%u", agent->compatibility);
                if (agent->compatibility == ICE_COMPATIBILITY_GOOGLE ||
                    agent->compatibility == ICE_COMPATIBILITY_MSN ||
                    agent->compatibility == ICE_COMPATIBILITY_OC2007) {
@@ -1316,14 +1306,13 @@ conn_check_remote_candidates_set(agent_t *agent)
                                  icheck->local_socket,
                                  local_candidate, remote_candidate);
                   if (candidate) {
-                     ICE_DEBUG("add conn check, local_candidate=%p, transport=%u",local_candidate,local_candidate->transport);
-                     if (local_candidate && local_candidate->transport == ICE_CANDIDATE_TRANSPORT_TCP_PASSIVE)
+                     if (local_candidate && local_candidate->transport == ICE_CANDIDATE_TRANSPORT_TCP_PASSIVE) {
                         priv_conn_check_add_for_candidate_pair_matched (agent, stream->id, component, 
                                  local_candidate, candidate, ICE_CHECK_DISCOVERED);
-                     else
+                     } else {
                         conn_check_add_for_candidate (agent, stream->id, component, candidate);
+                     }
                      
-                     ICE_DEBUG("use_candidate=%u",icheck->use_candidate);
                      if (icheck->use_candidate)
                         priv_mark_pair_nominated(agent, stream, component, candidate);
                      priv_schedule_triggered_check(agent, stream, component, 
@@ -1421,7 +1410,7 @@ priv_conn_check_find_next_waiting(candidate_check_pair_t *conn_check_list)
       return p;
   }
   
-  //ICE_DEBUG("not found next-waiting pair");
+  ICE_DEBUG("not found next-waiting pair");
   return NULL;
 }
 
@@ -1542,7 +1531,6 @@ priv_conn_check_tick_stream(stream_t *stream, agent_t *agent, struct timeval *no
   int keep_timer_going = ICE_FALSE;
   struct list_head *i;
 
-  ICE_DEBUG("FIXME: priv_conn_check_tick_stream");
   list_for_each(i,&stream->connchecks.list) {
     candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
 
@@ -1778,7 +1766,6 @@ priv_conn_check_tick_unlocked(agent_t *agent)
   }
 
   if (pair) {
-    ICE_DEBUG("found pair to initiate conncheck");
     priv_conn_check_initiate(agent, pair);
     keep_timer_going = ICE_TRUE;
   } else {
@@ -1809,15 +1796,9 @@ priv_conn_check_tick_unlocked(agent_t *agent)
        the timer to be reset if we get a set_remote_candidates after this
        point */
     if ( agent->conncheck_timer_ev != NULL ) {
-       ICE_DEBUG("stop timer");
        event_del(agent->conncheck_timer_ev);
        agent->conncheck_timer_ev = NULL;
     }
-    /*if (agent->conncheck_timer_source != NULL) {
-      g_source_destroy (agent->conncheck_timer_source);
-      g_source_unref (agent->conncheck_timer_source);
-      agent->conncheck_timer_source = NULL;
-    }*/
 
     /* XXX: what to signal, is all processing now really done? */
     ICE_DEBUG("Agent %p : changing conncheck state to COMPLETED.", agent);
@@ -1832,17 +1813,9 @@ priv_conn_check_tick(int fd, short event, void *arg) {
   int ret; 
   agent_t *agent = (agent_t*)arg;
 
-  ICE_DEBUG("schedule timer");
-
-  /*if (g_source_is_destroyed (g_main_current_source ())) {
-    nice_debug ("Source was destroyed. "
-        "Avoided race condition in priv_conn_check_tick");
-    return FALSE;
-  }*/
-
   ret = priv_conn_check_tick_unlocked(agent);
   if ( ret == ICE_FALSE ) {
-     ICE_ERROR("no more conncheck timer");
+     ICE_DEBUG("no more conncheck timer");
   }
   return;
 }
@@ -1853,16 +1826,13 @@ priv_conn_keepalive_tick(int fd, short event, void *arg) {
   agent_t *agent = (agent_t*)arg;
   int ret;
 
-  ICE_DEBUG("keepalive timer");
-
   if ( agent->keepalive_timer_ev == NULL ) {
-     ICE_DEBUG("timer was destroyed");
+     ICE_ERROR("timer was destroyed");
      return;
   }
 
   ret = priv_conn_keepalive_tick_unlocked(agent);
   if (ret == ICE_FALSE) {
-    ICE_DEBUG("conn keepalive timer failed");
     if (agent->keepalive_timer_ev != NULL) {
       event_del(agent->keepalive_timer_ev);
       agent->keepalive_timer_ev = NULL;
@@ -1879,11 +1849,11 @@ priv_conn_keepalive_tick(int fd, short event, void *arg) {
 int 
 conn_check_schedule_next(agent_t *agent)
 {
-   struct timeval schedule_interval, keepalive_interval;
-   struct event *schedule_ev, *keepalive_ev;
-   int ret = priv_conn_check_unfreeze_next(agent);
+  struct timeval schedule_interval, keepalive_interval;
+  struct event *schedule_ev, *keepalive_ev;
+  int ret = priv_conn_check_unfreeze_next(agent);
 
-   ICE_DEBUG("Agent %p : priv_conn_check_unfreeze_next returned %d", agent, ret);
+  ICE_DEBUG("Agent %p : priv_conn_check_unfreeze_next returned %d", agent, ret);
 
   if (agent->discovery_unsched_items > 0) {
     ICE_DEBUG("Agent %p : WARN: starting conn checks before local candidate gathering is finished.", agent);
@@ -1895,7 +1865,6 @@ conn_check_schedule_next(agent_t *agent)
 
   /* step: schedule timer if not running yet */
   if (ret == ICE_TRUE && agent->conncheck_timer_ev == NULL) {
-     ICE_DEBUG("create schedule timer");
      schedule_interval.tv_sec = 0;
      schedule_interval.tv_usec = agent->timer_ta * 1000;
      schedule_ev = event_new(agent->base,-1,EV_PERSIST,priv_conn_check_tick,agent);
@@ -1905,7 +1874,6 @@ conn_check_schedule_next(agent_t *agent)
 
   /* step: also start the keepalive timer */
   if (agent->keepalive_timer_ev == NULL) {
-     ICE_DEBUG("create keepalive timer");
      keepalive_interval.tv_sec = ICE_AGENT_TIMER_TR_DEFAULT;
      keepalive_interval.tv_usec = 0;
      keepalive_ev = event_new(agent->base,-1,EV_PERSIST,priv_conn_keepalive_tick,agent);
@@ -1956,12 +1924,9 @@ conncheck_stun_validater(StunAgent *agent,
       if (ufrag == NULL)
          continue;
 
-      ICE_DEBUG("msn_msoc_nice_compatibility: %u",msn_msoc_nice_compatibility);
       ICE_DEBUG("Comparing username/ufrag of len %d and %zu, equal=%d",
           username_len, ufrag_len, username_len >= ufrag_len ?
           memcmp (username, ufrag, ufrag_len) : 0);
-      ICE_HEXDUMP(username, (int)username_len,"username");
-      ICE_HEXDUMP(ufrag, (int)ufrag_len,"ufrag");
 
       if (ufrag_len > 0 && username_len >= ufrag_len &&
           memcmp(username, ufrag, ufrag_len) == 0) {
@@ -2043,11 +2008,10 @@ priv_reply_to_conn_check(agent_t *agent, stream_t *stream, component_t *componen
     const address_t *toaddr, socket_t *sockptr, size_t  rbuf_len, uint8_t *rbuf, int use_candidate)
 {
   ICE_DEBUG("reply to conncheck");
-
   ICE_HEXDUMP(rbuf,(int)rbuf_len,"rsp");
 
   //g_assert (rcand == NULL || nice_address_equal(&rcand->addr, toaddr) == ICE_TRUE);
-  if ( rcand != NULL && address_equal(&rcand->addr, toaddr) != ICE_TRUE ) {
+  if (rcand != NULL && address_equal(&rcand->addr, toaddr) != ICE_TRUE) {
      ICE_ERROR("not reply to conncheck");
      return;
   }
@@ -2222,10 +2186,11 @@ priv_add_peer_reflexive_pair(agent_t *agent, uint32_t stream_id, uint32_t compon
   pair->remote = parent_pair->remote;
   pair->sockptr = (socket_t*)local_cand->sockptr;
   pair->state = ICE_CHECK_DISCOVERED;
-  ICE_DEBUG("Agent %p : pair %p state DISCOVERED", agent, pair);
+  ICE_ERROR("new reflexive peer pair, foundation=%s(%p)", pair->remote->foundation, pair->remote);
   snprintf (pair->foundation, ICE_CANDIDATE_PAIR_MAX_FOUNDATION, "%s:%s",
       local_cand->foundation, parent_pair->remote->foundation);
-  if (agent->controlling_mode == ICE_TRUE)
+  //if (agent->controlling_mode == ICE_TRUE)
+  if (agent->controlling_mode)
     pair->priority = candidate_pair_priority(pair->local->priority,
         pair->remote->priority);
   else
@@ -2233,7 +2198,7 @@ priv_add_peer_reflexive_pair(agent_t *agent, uint32_t stream_id, uint32_t compon
         pair->local->priority);
   pair->nominated = ICE_FALSE;
   pair->controlling = agent->controlling_mode;
-  ICE_DEBUG("Agent %p : added a new peer-discovered pair with foundation of '%s'.",  agent, pair->foundation);
+  ICE_ERROR("added a new peer-discovered pair, f=%s, prio=%lu", pair->foundation, pair->priority);
 
   //stream->conncheck_list = g_slist_insert_sorted (stream->conncheck_list, pair,
   //    (GCompareFunc)conn_check_compare);
@@ -2316,7 +2281,7 @@ priv_process_response_check_for_peer_reflexive(agent_t *agent, stream_t *stream,
 	       "Constructing a Valid Pair") */
     ICE_DEBUG("Agent %p : adding new pair, cand=%p", agent, cand);
     new_pair = priv_add_peer_reflexive_pair (agent, stream->id, component->id, cand, p);
-    ICE_DEBUG("Agent %p : conncheck %p FAILED, %p DISCOVERED.", agent, p, new_pair);
+    ICE_ERROR("Agent %p : conncheck %p FAILED, %p DISCOVERED.", agent, p, new_pair);
   }
 
   ICE_DEBUG("Agent %p : got pair matched, pair=%p", agent, new_pair);
@@ -2419,7 +2384,6 @@ priv_map_reply_to_conn_check_request(agent_t *agent, stream_t *stream, component
 
           /* step: updating nominated flag (ICE 7.1.2.2.4 "Updating the
              Nominated Flag" (ID-19) */
-          ICE_DEBUG("pair info, p=%p,  nominated=%u", ok_pair, ok_pair->nominated);
           if (ok_pair->nominated == ICE_TRUE) {
             priv_update_selected_pair(agent, component, ok_pair);
 
@@ -2565,6 +2529,9 @@ priv_map_reply_to_keepalive_conncheck (agent_t *agent,
   StunTransactionId response_id;
   stun_message_id (resp, response_id);
 
+  ICE_DEBUG("component info, state=%u(%u), sid=%u, cid=%u, agent=%p", 
+            component->state, ICE_COMPONENT_STATE_DISCONNECTED, 
+            component->stream->id, component->id, agent);
   if (component->selected_pair.keepalive.stun_message.buffer) {
       stun_message_id (&component->selected_pair.keepalive.stun_message,
           conncheck_id);
@@ -2764,11 +2731,11 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
                 component->id,  rcand, lcand,
                 uname, sizeof (uname), inbound);
 
-            ICE_DEBUG("Comparing usernames of size %d and %d: %d",
+            /*ICE_DEBUG("Comparing usernames of size %d and %d: %d",
                 username_len, uname_len, username && uname_len == username_len &&
                 memcmp (username, uname, uname_len) == 0);
             ICE_HEXDUMP(username, (username ? username_len : 0),"first_username");
-            ICE_HEXDUMP(uname, uname_len,"second_username");
+            ICE_HEXDUMP(uname, uname_len,"second_username");*/
 
             if (username &&
                 uname_len == username_len &&
@@ -2777,7 +2744,6 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
                remote_candidate2 = rcand;
                break;
             }    
-
 
          }
          if ( remote_candidate2 != NULL )
@@ -2835,15 +2801,12 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
       } // compatibility
       rbuf_len = sizeof (rbuf);
 
-      ICE_HEXDUMP((char*)&sockaddr.storage, (int)sizeof(sockaddr),"sock");
-
       res = stun_usage_ice_conncheck_create_reply(&component->stun_agent, &req,
               &msg, rbuf, &rbuf_len, &sockaddr.storage, sizeof (sockaddr),
               &control, agent->tie_breaker,
               agent_to_ice_compatibility (agent));
 
       ICE_DEBUG("ice conncheck, result=%lu",res);
-      ICE_HEXDUMP(rbuf,(int)rbuf_len,"resp");
 
       if ( agent->compatibility == ICE_COMPATIBILITY_MSN
           || agent->compatibility == ICE_COMPATIBILITY_OC2007) {
@@ -2868,18 +2831,21 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
             agent_signal_initial_binding_request_received(agent, stream);
 
          if (!list_empty(&component->remote_candidates.list) && remote_candidate == NULL) {
-            ICE_DEBUG("Agent %p : No matching remote candidate for incoming check ->"
+            ICE_ERROR("Agent %p : No matching remote candidate for incoming check ->"
                   "peer-reflexive candidate.", agent);
             remote_candidate = discovery_learn_remote_peer_reflexive_candidate(
                      agent, stream, component, priority, from, nicesock, local_candidate,
                      remote_candidate2 ? remote_candidate2 : remote_candidate);
 
             if(remote_candidate) {
-                if (local_candidate && local_candidate->transport == ICE_CANDIDATE_TRANSPORT_TCP_PASSIVE)
+                if (local_candidate && local_candidate->transport == ICE_CANDIDATE_TRANSPORT_TCP_PASSIVE) {
+                   ICE_ERROR("add conn check, foundation=%s(%p)",remote_candidate->foundation, remote_candidate);
                    priv_conn_check_add_for_candidate_pair_matched (agent, stream->id, 
                           component, local_candidate, remote_candidate, ICE_CHECK_DISCOVERED);
-                else
+                } else {
+                   ICE_ERROR("add conn check, foundation=%s(%p)",remote_candidate->foundation, remote_candidate);
                    conn_check_add_for_candidate(agent, stream->id, component, remote_candidate);
+                }
             }
          }
 
@@ -2900,7 +2866,7 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
 
       } else {
          ICE_DEBUG("Agent %p : Invalid STUN packet, ignoring it", agent);
-         exit(0);
+         //exit(0);
          return ICE_FALSE;
       }
   } else { // STUN_REQ
@@ -2938,8 +2904,6 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
       if (trans_found != ICE_TRUE)
         ICE_DEBUG("existing transaction not matched, probably a keepalive, agent=%p", agent);
   }
-
-  ICE_DEBUG("FIXME: handle stun message");
 
   return ICE_TRUE;
 }
@@ -2985,5 +2949,10 @@ void conn_check_prune_stream(agent_t *agent, stream_t *stream)
   return;
 }
 
-
+void
+conn_check_free(agent_t *agent) 
+{
+   //FIXME: free conn check
+   return;
+}
 

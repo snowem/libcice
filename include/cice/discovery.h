@@ -137,6 +137,12 @@ discovery_prune_stream(agent_t *agent, uint32_t stream_id);
 void
 refresh_prune_stream(agent_t *agent, uint32_t stream_id);
 
+void
+discovery_free(agent_t *agent);
+
+void
+refresh_free(agent_t *agent);
+
 #ifdef __cplusplus
 }
 #endif

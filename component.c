@@ -43,8 +43,9 @@
  */
 
 
-#include "cice/component.h"
 #include "cice/agent.h"
+#include "cice/component.h"
+#include "cice/network.h"
 
 void
 incoming_check_free(incoming_check_t *icheck)
@@ -62,6 +63,8 @@ component_new (agent_t *agent, stream_t *stream, uint32_t id)
 
   ICE_DEBUG("created component, cid=%u", id);
   component = ICE_MALLOC(component_t);
+  if (!component) return 0;
+  ICE_MEMZERO(component,component_t);
   component->id = id;
   component->state = ICE_COMPONENT_STATE_DISCONNECTED;
   component->restart_candidate = 0;
@@ -140,7 +143,8 @@ component_update_selected_pair (component_t *component, const candidate_pair_t *
   if ( component == NULL || pair == NULL )
      return;
 
-  ICE_DEBUG("setting SELECTED PAIR for component %u: %s:%s (prio:%lu)", component->id, pair->local->foundation,
+  ICE_DEBUG("setting SELECTED PAIR for component, cid=%u, lfoundation=%s, rfoundation=%s ,prio:%lu", 
+      component->id, pair->local->foundation,
       pair->remote->foundation, pair->priority);
 
   /* FIXME: clean socket resources */
@@ -161,6 +165,7 @@ component_update_selected_pair (component_t *component, const candidate_pair_t *
   component->selected_pair.remote = pair->remote;
   component->selected_pair.priority = pair->priority;
 
+  return;
 }
 
 /*
@@ -175,9 +180,6 @@ component_find_pair(component_t *cmp, agent_t *agent, const char *lfoundation,
 
   struct list_head *i;
   candidate_pair_t result = { 0, };
-
-  ICE_DEBUG("find component pair, lfoundation=%s,rfoundation=%s",
-        lfoundation,rfoundation);
 
   list_for_each(i,&cmp->local_candidates.list) {
     candidate_t *candidate = list_entry(i,candidate_t,list);
@@ -218,7 +220,6 @@ component_set_selected_remote_candidate(agent_t *agent,
   if (candidate == NULL)
      return NULL;
 
-  //for (item = component->local_candidates; item; item = g_slist_next (item)) {
   list_for_each(item,&component->local_candidates.list) {
     candidate_t *tmp = list_entry(item,candidate_t,list);
     uint64_t tmp_prio = 0;
@@ -229,7 +230,7 @@ component_set_selected_remote_candidate(agent_t *agent,
       continue;
 
     tmp_prio = agent_candidate_pair_priority (agent, tmp, candidate);
-
+    ICE_DEBUG("computing priority, temp=%lu, prio=%lu",tmp_prio,priority);
     if (tmp_prio > priority) {
       priority = tmp_prio;
       local = tmp;
@@ -252,6 +253,7 @@ component_set_selected_remote_candidate(agent_t *agent,
 
   component_clear_selected_pair (component);
 
+  ICE_DEBUG("set selected pair, prio=%lu",priority);
   component->selected_pair.local = local;
   component->selected_pair.remote = remote;
   component->selected_pair.priority = priority;
@@ -259,5 +261,35 @@ component_set_selected_remote_candidate(agent_t *agent,
   return local;
 }
 
+void
+ice_component_close(component_t *c) {
+  struct list_head *n,*p; 
+  socket_t *sock = 0;
+
+  c->state = ICE_COMPONENT_STATE_DISCONNECTED;
+
+  // free local candidates  
+  list_for_each_safe(n,p,&c->local_candidates.list) {
+    candidate_t *c = list_entry(n,candidate_t,list);
+    list_del(&c->list);
+    candidate_free(c);
+  }
+
+  list_for_each_safe(n,p,&c->remote_candidates.list) {
+    candidate_t *c = list_entry(n,candidate_t,list);
+    list_del(&c->list);
+    candidate_free(c);
+  }
+  sock = (socket_t*)c->sock;
+  ICE_DEBUG("component close, fd=%d, sid=%u, cid=%u", sock->fd, c->stream->id, c->id);
+  event_del(sock->ev);
+  sock->agent = 0;
+  sock->stream = 0;
+  sock->component = 0;
+  socket_free(sock);
+
+
+  return;
+}
 
 

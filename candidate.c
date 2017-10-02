@@ -264,7 +264,7 @@ candidate_ice_priority (const candidate_t *candidate,
 void
 candidate_free(candidate_t *candidate)
 {
-  if ( candidate == NULL )
+  if (candidate == NULL)
      return;
 
   if (candidate->username)
@@ -273,11 +273,10 @@ candidate_free(candidate_t *candidate)
   if (candidate->password)
     ICE_FREE(candidate->password);
 
-  ICE_DEBUG("FIXME: free turn pointer");
   //if (candidate->turn)
   //  turn_server_unref (candidate->turn);
 
-  ICE_DEBUG("FIXME: free list of candidate");
+  //FIXME: free list of candidate
   ICE_FREE(candidate);
 }
 
@@ -325,7 +324,7 @@ candidate_copy(const candidate_t *candidate)
 }
 
 void
-print_candidate(candidate_t *c) 
+print_candidate(candidate_t *c, char *msg) 
 {
    char temp[INET6_ADDRSTRLEN] = {0};
    if ( c == NULL )
@@ -333,8 +332,8 @@ print_candidate(candidate_t *c)
 
    address_to_string(&c->addr,temp);
 
-   ICE_DEBUG("candidate info, addr=%s, port=%u foundation=%s, type=%u",
-         temp,address_get_port((const address_t*)&c->addr),c->foundation,c->type);
+   ICE_ERROR("candidate info %s, addr=%s, port=%u foundation=%s, prio=%u, type=%u",
+         msg, temp,address_get_port((const address_t*)&c->addr),c->foundation,c->priority, c->type);
 
    return;
 }

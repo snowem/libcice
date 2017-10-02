@@ -92,16 +92,19 @@ struct _stream
 
 
 stream_t*
-stream_new (agent_t *agent, uint32_t n_components);
+stream_new(agent_t *agent, uint32_t n_components);
 
 component_t *
-stream_find_component_by_id (const stream_t *stream, uint32_t id);
+stream_find_component_by_id(const stream_t *stream, uint32_t id);
 
 void 
-stream_initialize_credentials (stream_t *stream/*, NiceRNG *rng*/);
+stream_initialize_credentials(stream_t *stream/*, NiceRNG *rng*/);
 
 int
 stream_all_components_ready(const stream_t *stream);
+
+void
+ice_stream_close(stream_t *s);
 
 #ifdef __cplusplus
 }

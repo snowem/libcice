@@ -42,15 +42,12 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
-#include "cice/utils.h"
-#include "cice/log.h"
-
 #include "cice/stun/stunmessage.h"
 #include "cice/stun/stunagent.h"
 #include "cice/stun/stunhmac.h"
 #include "cice/stun/stun5389.h"
 #include "cice/stun/utils.h"
-
+#include "cice/log.h"
 
 
 static bool stun_agent_is_unknown (StunAgent *agent, uint16_t type);
@@ -678,13 +675,13 @@ stun_agent_find_unknowns (StunAgent *agent, const StunMessage * msg,
   //len = stun_message_length_new(msg);
   len = stun_getw (msg->buffer + STUN_MESSAGE_LENGTH_POS) + 
         STUN_MESSAGE_HEADER_LENGTH;
-  STUN_DEBUG("len=%u,offset=%lu",len,offset);
+  //STUN_DEBUG("len=%u,offset=%lu",len,offset);
   while ((offset < len) && (count < max))
   {
     size_t alen = stun_getw (msg->buffer + offset + STUN_ATTRIBUTE_TYPE_LEN);
     uint16_t atype = stun_getw (msg->buffer + offset);
 
-    STUN_DEBUG("unknowns: atype=%04x,alen=%lu,offset=%lu",atype,alen,offset);
+    //STUN_DEBUG("unknowns: atype=%04x,alen=%lu,offset=%lu",atype,alen,offset);
     if (!stun_optional (atype) && stun_agent_is_unknown (agent, atype))
     {
       STUN_DEBUG("STUN unknown: attribute 0x%04x(%u bytes)",

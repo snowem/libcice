@@ -45,7 +45,6 @@
 
 #include "cice/stun/debug.h"
 
-
 static int debug_enabled = 1;
 
 void stun_debug_enable (void) {

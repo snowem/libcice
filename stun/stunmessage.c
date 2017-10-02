@@ -56,9 +56,8 @@
 
 #include "cice/stun/debug.h"
 #include "cice/stun/stunmessage.h"
-#include "cice/stun/utils.h"
 #include "cice/types.h"
-#include "cice/utils.h"
+#include "cice/stun/utils.h"
 
 int stun_message_init (StunMessage *msg, StunClass c, StunMethod m,
     const StunTransactionId id)
@@ -86,10 +85,10 @@ uint16_t stun_message_length (const StunMessage *msg)
 
 uint16_t stun_message_length_new (const StunMessage *msg)
 {
-  uint16_t testlen = 0;
-  testlen = stun_getw (msg->buffer + STUN_MESSAGE_LENGTH_POS) + STUN_MESSAGE_HEADER_LENGTH;
-  ICE_DEBUG("testlen2=%u",testlen + STUN_MESSAGE_LENGTH_POS);
-  return testlen;
+  uint16_t len = 0;
+  len = stun_getw (msg->buffer + STUN_MESSAGE_LENGTH_POS) + STUN_MESSAGE_HEADER_LENGTH;
+  //ICE_DEBUG("len=%u",len + STUN_MESSAGE_LENGTH_POS);
+  return len;
 }
 
 
@@ -113,18 +112,16 @@ stun_message_find (const StunMessage *msg, int /*StunAttribute*/ type,
 
   offset = STUN_MESSAGE_ATTRIBUTES_POS;
 
-  ICE_DEBUG("length=%lu,offset=%lu,align=%u",length,offset,msg->agent->usage_flags & STUN_AGENT_USAGE_NO_ALIGNED_ATTRIBUTES);
+  //ICE_DEBUG("length=%lu,offset=%lu,align=%u",length,offset,
+  //msg->agent->usage_flags & STUN_AGENT_USAGE_NO_ALIGNED_ATTRIBUTES);
 
   while (offset < length)
   {
     uint16_t atype = stun_getw (msg->buffer + offset);
     size_t alen = stun_getw (msg->buffer + offset + STUN_ATTRIBUTE_TYPE_LEN);
 
-
     offset += STUN_ATTRIBUTE_VALUE_POS;
-
-    ICE_DEBUG("type=%0x, len=%0x, offset=%lu",atype,alen,offset);
-
+    //ICE_DEBUG("type=%0x, len=%0x, offset=%lu",atype,alen,offset);
     if (atype == type)
     {
       *palen = alen;
@@ -151,9 +148,7 @@ stun_message_find (const StunMessage *msg, int /*StunAttribute*/ type,
 
     if (!(msg->agent &&
         (msg->agent->usage_flags & STUN_AGENT_USAGE_NO_ALIGNED_ATTRIBUTES))) {
-      ICE_DEBUG("not align, len=%lu",alen);
       alen = stun_align (alen);
-      ICE_DEBUG("do aligning, len=%lu",alen);
     }
 
     offset += alen;
@@ -502,7 +497,7 @@ stun_message_append_xor_addr (StunMessage *msg, StunAttribute type,
   /* Must be big enough to hold any supported address: */
   struct sockaddr_storage tmpaddr;
 
-  ICE_HEXDUMP((char*)addr,sizeof(addr),"addr");
+  HEXDUMP((char*)addr,sizeof(addr),"addr");
 
   if ((size_t) addrlen > sizeof (tmpaddr))
     addrlen = sizeof (tmpaddr);

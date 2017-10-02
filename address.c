@@ -42,7 +42,6 @@
  * Jackie Dinh - 2016
  */
 
-
 #include <arpa/inet.h>
 
 #include "cice/address.h"
