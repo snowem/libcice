@@ -495,8 +495,8 @@ static void priv_add_new_check_pair (agent_t *agent, uint32_t stream_id, compone
   
   ICE_DEBUG("added a new conncheck, agent=%p, pair=%p, foundation=%s, nominated=%u, stream_id=%u", 
          agent, pair, pair->foundation, pair->nominated, stream_id);
-  print_candidate(local);
-  print_candidate(remote);
+  print_candidate(local,"local");
+  print_candidate(remote,"remote");
   /* stream->conncheck_list = g_slist_insert_sorted (stream->conncheck_list, pair,
       (GCompareFunc)conn_check_compare); */
 

@@ -222,7 +222,7 @@ priv_add_local_candidate_pruned (agent_t *agent, uint32_t stream_id,
   }
 
   ICE_DEBUG("add new candidate, cand=%p",candidate);
-  print_candidate(candidate);
+  print_candidate(candidate,"new");
   list_add(&candidate->list,&component->local_candidates.list);
   conn_check_add_for_local_candidate(agent, stream_id, component, candidate);
 
