@@ -77,6 +77,8 @@ typedef enum {
 struct _socket {
    int   fd;
    IceSocketType type;
+   /* TODO: abstract network layer 
+    * to support epoll, select, kqueue etc */
    struct event *ev;
    struct bufferevent *bev;
    address_t addr;

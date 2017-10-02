@@ -47,14 +47,13 @@
 #include <sys/socket.h>
 #endif
 
-#include "cice/stun/debug.h"
-#include "cice/stun/stunagent.h"
-#include "cice/stun/usages/turn.h"
-
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
 
+#include "cice/stun/stunagent.h"
+#include "cice/stun/debug.h"
+#include "cice/stun/usages/turn.h"
 
 
 #define REQUESTED_PROPS_E 0x80000000

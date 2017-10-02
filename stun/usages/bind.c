@@ -62,15 +62,16 @@
 # include <poll.h>
 #endif
 
+
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
 #include <errno.h>
 
-#include "cice/stun/usages/bind.h"
-#include "cice/stun/stunagent.h"
 #include "cice/stun/debug.h"
+#include "cice/stun/stunagent.h"
+#include "cice/stun/usages/bind.h"
 #include "cice/stun/usages/timer.h"
 
 

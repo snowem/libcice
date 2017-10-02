@@ -41,8 +41,9 @@
 
 int g_verbose = 1;
 int g_log_fd = -1;
-int g_log_level = ICE_LOG_ERROR;
+int g_log_level = ICE_LOG_DEBUG;
 ice_log_cb g_ice_log_cb = NULL;
+void *g_ice_log_data = NULL;
 
 void
 log_init(char* file, int level)
@@ -64,15 +65,16 @@ log_init(char* file, int level)
 }
 
 void 
-ice_set_log_callback(ice_log_cb cb) {
+ice_set_log_callback(ice_log_cb cb, void* data) {
    g_ice_log_cb = cb;
+   g_ice_log_data = data;
    return;
 }
 
 void 
 ice_log_internal(int severity, const char *msg) {
    if (g_ice_log_cb) {
-      g_ice_log_cb(severity,msg);
+      g_ice_log_cb(severity,msg,g_ice_log_data);
       return;
    }
 
@@ -83,37 +85,19 @@ ice_log_internal(int severity, const char *msg) {
 
 void 
 ice_log(int severity, const char *fmt, ...) {
-   char buffer[10*1024];
+   char buffer[4*1024] = {0};
    va_list argptr;
-   
-   if (severity >= g_log_level || !g_ice_log_cb)
+
+   if ( g_log_level > severity || !g_ice_log_cb)
       return;
 
    va_start(argptr, fmt);
-   vsnprintf(buffer, 10*1024, fmt, argptr);
+   vsnprintf(buffer, 4*1024, fmt, argptr);
    va_end(argptr);
    ice_log_internal(severity,buffer);
    return;
 }
 
-/*void log(int level, const char* sourcefilename, int line, const char* msg, ...) {
-    static const char* level_str[] = 
-            {"INFO", "DEBUG", "WARN", "ERROR", "FATAL"};
-
-    if ( g_log_fd < 0 )
-       return;
-
-    if (level >= g_log_level) {
-        char dest[5*1024] = {0};
-        va_list argptr;
-        va_start(argptr, msg);
-        vsnprintf(dest, 5*1024, msg, argptr);
-        va_end(argptr);
-        dprintf(g_log_fd, "[%s|%s:%d]: %s\n", level_str[level], sourcefilename, line,  dest);
-    }
-
-    return;
-}*/
 
 
 

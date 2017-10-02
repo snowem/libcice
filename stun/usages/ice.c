@@ -53,8 +53,8 @@
 #endif
 
 
-#include "cice/utils.h"
 #include "cice/stun/stunagent.h"
+#include "cice/stun/utils.h"
 #include "cice/stun/debug.h"
 
 /** ICE connectivity checks **/
@@ -87,6 +87,7 @@ stun_usage_ice_conncheck_create (StunAgent *agent, StunMessage *msg,
     if (val != STUN_MESSAGE_RETURN_SUCCESS)
       return 0;
 
+    ICE_DEBUG("create STUN message, controlling=%u, tie=%lu", controlling, tie);
     if (controlling)
       val = stun_message_append64 (msg, STUN_ATTRIBUTE_ICE_CONTROLLING, tie);
     else

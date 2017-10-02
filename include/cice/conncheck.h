@@ -151,6 +151,9 @@ priv_compute_conncheck_timer(agent_t *agent,
 void 
 conn_check_prune_stream(agent_t *agent, stream_t *stream);
 
+void
+conn_check_free(agent_t *agent);
+
 #ifdef __cplusplus
 }
 #endif

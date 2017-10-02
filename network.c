@@ -89,7 +89,7 @@ stun_recv_message(socket_t *sock, address_t* from, char *buf, int len) {
    } else {
       //2.2 handle other data
       //ICE_DEBUG("Handle non-stun message");
-      //ICE_HEXDUMP(buf,len,"msg");
+      //HEXDUMP(buf,len,"msg");
       if ( component->io_callback ) {
          //ICE_DEBUG("call user-defined callback");
          //janus_ice_cb_nice_recv
@@ -109,9 +109,9 @@ static void
 socket_udp_read_cb(evutil_socket_t fd, short what, void *ctx)
 {
    static char buf[MAX_BUF_SIZE] = {0};
-   struct sockaddr_in remaddr;
    socket_t *sock = (socket_t*)ctx;;
-   address_t *fromaddr;
+   struct sockaddr_in remaddr;
+   address_t fromaddr;
    socklen_t addrlen;
    size_t recvlen;
    int ret;
@@ -122,32 +122,23 @@ socket_udp_read_cb(evutil_socket_t fd, short what, void *ctx)
    recvlen = recvfrom(fd, buf, MAX_BUF_SIZE, 0, (struct sockaddr*)&remaddr, &addrlen);
 
    ICE_DEBUG("Receive data, fd=%u, ip=%u, port=%u, recvlen: %ld", 
-        fd, remaddr.sin_addr.s_addr, remaddr.sin_port, recvlen);
-   //ICE_HEXDUMP((char*)&remaddr,sizeof(remaddr),"ipaddr");
-
+        fd, remaddr.sin_addr.s_addr, ntohs(remaddr.sin_port), recvlen);
    if (recvlen <= 0) {
       ICE_ERROR("could not receive data, ret=%ld",recvlen);
       return;
    }   
-   //ICE_HEXDUMP(buf,recvlen,"data");
 
-   sock = (socket_t*)ctx;
+   //ICE_HEXDUMP(buf,recvlen,"udp");
    ICE_DEBUG("get udp socket, agent=%p,stream=%p,component=%p",
          sock->agent,sock->stream,sock->component);
-
-   fromaddr = address_new();
-   if ( fromaddr == NULL ) {
-      ICE_ERROR("could not get address");
-      return;
-   }
-
-   address_set_from_sockaddr(fromaddr,(const struct sockaddr*)&remaddr);
-   address_set_port(fromaddr,ntohs(remaddr.sin_port));
-   print_address(fromaddr);
+   memset(&fromaddr, 0, sizeof(fromaddr));
+   address_set_from_sockaddr(&fromaddr,(const struct sockaddr*)&remaddr);
+   address_set_port(&fromaddr,ntohs(remaddr.sin_port));
+   print_address(&fromaddr);
 
    //FIXME: check order of udp packets or force no-udp-fragment?
-   if ( is_stun_message((uint8_t*)buf,recvlen,1) > 0 ) {
-      ret = stun_recv_message(sock,fromaddr,buf,recvlen);
+   if (is_stun_message((uint8_t*)buf,recvlen,1) > 0) {
+      ret = stun_recv_message(sock,&fromaddr,buf,recvlen);
       if ( ret < 0 ) {
          ICE_ERROR("failed to recv stun msg");
       }
@@ -157,7 +148,6 @@ socket_udp_read_cb(evutil_socket_t fd, short what, void *ctx)
       stream_t *s = (stream_t*)sock->stream;
       component_t *c = (component_t*)sock->component;
       if (c->io_callback) {
-         ICE_ERROR("call io callback, cid=%u",c->id);
          //ice_data_recv_cb
          c->io_callback(agent,s->id,c->id,buf,recvlen,c->io_data);
       } else {
@@ -165,9 +155,6 @@ socket_udp_read_cb(evutil_socket_t fd, short what, void *ctx)
       }
 
    }
-
-   if ( fromaddr )
-      address_free(fromaddr);
 
    return;
 }
@@ -217,34 +204,34 @@ udp_bsd_socket_new(agent_t *agent, stream_t *stream, component_t *component,  ad
    struct event *ev=0;
    int fd = 0;
   
-   if ( addr->s.addr.sa_family == AF_INET ) {
+   if (addr->s.addr.sa_family == AF_INET) {
       fd = socket(AF_INET,SOCK_DGRAM,0);
-      if ( fd < 0 ) {
+      if (fd < 0) {
          ICE_ERROR("cannot create udp socket");
          return NULL;
       }
-      if ( bind(fd,&addr->s.addr,sizeof(addr->s.ip4)) < 0 ) {
+      if (bind(fd,&addr->s.addr,sizeof(addr->s.ip4)) < 0) {
          ICE_ERROR("failed to binding ip4");
          goto errors;
       }
       addrlen = sizeof(addr->s.ip4); 
-      if ( getsockname(fd, &addr->s.addr, &addrlen) < 0 ) {
+      if (getsockname(fd, &addr->s.addr, &addrlen) < 0) {
          ICE_ERROR("getsockname failed");
          goto errors;
       }
       ICE_DEBUG("binding ip4, addrlen=%u,port=%u", addrlen,addr->s.ip4.sin_port);
-   } else if ( addr->s.addr.sa_family == AF_INET6 ) {
+   } else if (addr->s.addr.sa_family == AF_INET6) {
       fd = socket(AF_INET6,SOCK_DGRAM,0);
-      if ( fd < 0 ) {
+      if (fd < 0) {
          ICE_ERROR("cannot create udp socket");
          return NULL;
       }
-      if ( bind(fd,&addr->s.addr,sizeof(addr->s.ip6)) < 0 ) {
+      if (bind(fd,&addr->s.addr,sizeof(addr->s.ip6)) < 0) {
          ICE_ERROR("failed to binding ip6, errno=%d",errno);
          goto errors;
       }
       addrlen = sizeof(addr->s.ip6); 
-      if ( getsockname(fd, &addr->s.addr, &addrlen) < 0 ) {
+      if (getsockname(fd, &addr->s.addr, &addrlen) < 0) {
          ICE_ERROR("getsockname failed");
          goto errors;
       }
@@ -252,7 +239,7 @@ udp_bsd_socket_new(agent_t *agent, stream_t *stream, component_t *component,  ad
    }
 
    sock = socket_new(ICE_SOCKET_TYPE_UDP_BSD);
-   if ( sock == NULL )
+   if (sock == NULL)
       return NULL;
   
    //bev = bufferevent_socket_new(agent->base, 0, BEV_OPT_CLOSE_ON_FREE);
@@ -269,13 +256,13 @@ udp_bsd_socket_new(agent_t *agent, stream_t *stream, component_t *component,  ad
    sock->stream = stream;
    sock->component = component;
 
-   ICE_DEBUG("create udp socket, agent=%p,stream=%p,component=%p",
-         agent,stream,component);
+   ICE_DEBUG("create udp socket, fd=%u, agent=%p,stream=%p,component=%p",
+         fd, agent,stream,component);
 
    return sock;
 
 errors:
-   if ( sock != NULL ) 
+   if (sock != NULL) 
       socket_free(sock);
    if ( fd > 0 ) 
       close(fd);
@@ -295,12 +282,12 @@ tcp_active_socket_new(agent_t *agent, stream_t *stream,
 
    sock->addr = *addr;    
 
-   ICE_DEBUG("FIXME: setup io callbacks");
    fd = socket(AF_INET,SOCK_STREAM,0);
    evutil_make_socket_nonblocking(fd);
    bev = bufferevent_socket_new(agent->base, fd, BEV_OPT_CLOSE_ON_FREE);
    bufferevent_setcb(bev, socket_tcp_read_cb, NULL, socket_event_cb, agent);
 
+   /* FIXME: can use only sock->ev for libevent */
    sock->bev = bev;
 
    return sock;
@@ -316,7 +303,8 @@ tcp_passive_socket_new(agent_t *agent, stream_t *stream,
 
    sock->addr = *addr;    
 
-   ICE_DEBUG("FIXME: setup io callbacks");
+   /* FIXME: setup io callbacks */
+
    return sock;
 }
 
@@ -338,11 +326,15 @@ socket_new(IceSocketType type) {
 void
 socket_free(socket_t *sock)
 {
-  if (sock) {
-    //sock->close (sock);
-    ICE_DEBUG("FIXME: free socket resources");
-    ICE_FREE(sock);
+  if (!sock) return;
+
+  if (sock->type == ICE_SOCKET_TYPE_UDP_BSD) {
+    event_del(sock->ev);
   }
+  close(sock->fd);
+  ICE_FREE(sock);
+
+  return;
 }
 
 int
@@ -360,7 +352,7 @@ udp_socket_send(socket_t *sock, const address_t *to,
    //socket_send_messages
    //ICE_DEBUG("udp_socket_send, fd=%d",sock->fd);
    //print_address(to); 
-   //ICE_HEXDUMP(buf,len,"udp_send");
+   //HEXDUMP(buf,len,"udp_send");
 
    n = sendto(sock->fd, buf, len, 0, &to->s.addr, get_address_length(to));
    if ( n < 0 ) {

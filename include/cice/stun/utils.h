@@ -72,10 +72,34 @@ StunMessageReturn stun_xor_address (const StunMessage *msg,
     struct sockaddr_storage *addr, socklen_t addrlen,
     uint32_t magic_cookie);
 
+#define HEXDUMP(_p,len,type)\
+{\
+   char __buf__[4*1024];\
+   char *p = (char*)_p;\
+   int i, j, _i;\
+   STUN_DEBUG("---- dump buffer (%s) ---- len=%lu",type,len);\
+   for (i = 0; i < (int)len; ) {\
+      memset(__buf__, sizeof(__buf__), ' ');\
+      sprintf(__buf__, "%5d: ", i); \
+      _i = i;\
+      for (j=0; j < 16 && i < (int)len; i++, j++)\
+         sprintf(__buf__ +7+j*3, "%02x ", (uint8_t)((p)[i]));\
+      i = _i;   \
+      for (j=0; j < 16 && i < (int)len; i++, j++)\
+         sprintf(__buf__ +7+j + 48, "%c",\
+            isprint((p)[i]) ? (p)[i] : '.'); \
+      STUN_DEBUG("%s: %s", type, __buf__);\
+   }\
+}
+
 /*#include <stdio.h>
 #define FUNCLINE "%s:%u: "
 #define STUN_DEBUG(fmt, ...) \
 {  printf("[DEBUG]" FUNCLINE fmt "\n", __FUNCTION__,__LINE__, ##__VA_ARGS__); }*/
+
+
+
+
 
 # ifdef __cplusplus
 }

@@ -131,6 +131,18 @@ stream_all_components_ready(const stream_t *stream)
 }
 
 
+void
+ice_stream_close(stream_t *s) {
+  struct list_head *i,*p;
+  list_for_each_safe(i,p,&s->components.list) {
+    component_t *c = list_entry(i,component_t,list);
+    list_del(&c->list);
+    ice_component_close(c);
+  }
+
+
+  return;
+}
 
 
 

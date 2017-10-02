@@ -127,6 +127,7 @@ struct _component
 
   agent_recv_func  io_callback;    /* function called on io cb */
   void            *io_data;        /* data passed to the io function */
+  void            *sock;
 
   struct stun_agent_t  stun_agent; /* This stun agent is used to validate all stun requests */
 
@@ -164,6 +165,9 @@ component_set_selected_remote_candidate(agent_t *agent,
 
 void
 incoming_check_free(incoming_check_t *icheck);
+
+void
+ice_component_close(component_t *c);
 
 #ifdef __cplusplus
 }

@@ -12,7 +12,6 @@
  * See README and COPYING for more details.
  */
 
-
 #include <string.h>
 
 #include "cice/stun/sha1.h"

@@ -144,7 +144,7 @@ candidate_pair_priority(uint32_t o_prio, uint32_t a_prio);
 
 
 void
-print_candidate(candidate_t *c);
+print_candidate(candidate_t *c, char *msg);
 
 #ifdef __cplusplus
 }

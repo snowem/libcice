@@ -283,7 +283,7 @@ discovery_add_local_host_candidate (
   } else if (transport == ICE_CANDIDATE_TRANSPORT_TCP_PASSIVE) {
     nicesock = tcp_passive_socket_new(agent, stream, component, address);
   } else {
-    ICE_ERROR("FIXME: not create socket, add tcp-so");
+    ICE_ERROR("wrong candidate transport, transport=%u", transport);
   }
 
   if (!nicesock) {
@@ -292,12 +292,13 @@ discovery_add_local_host_candidate (
   }
 
 
-  ICE_DEBUG("prune local candidate, sid=%u,fd=%u",stream_id,nicesock->fd);
+  ICE_DEBUG("local candidate info, sid=%u,fd=%u",stream_id,nicesock->fd);
   print_address(&nicesock->addr);
   candidate->sockptr = nicesock;
   candidate->addr = nicesock->addr;
   candidate->base_addr = nicesock->addr;
 
+  /* check whether a candidate is redundant */
   if (priv_add_local_candidate_pruned 
        (agent, stream_id, component, candidate) != ICE_OK) {
      ICE_DEBUG("got redundant candidate, sid=%u",stream_id);
@@ -305,11 +306,10 @@ discovery_add_local_host_candidate (
     goto errors;
   }
 
-/*
-  _priv_set_socket_tos (agent, nicesock, stream->tos);
-  component_attach_socket(component, nicesock);
-*/
+  /* _priv_set_socket_tos (agent, nicesock, stream->tos);
+  component_attach_socket(component, nicesock); */
   nicesock->component = component;
+  component->sock = nicesock;
   *outcandidate = candidate;
 
   return HOST_CANDIDATE_SUCCESS;
@@ -400,7 +400,6 @@ static void priv_assign_remote_foundation (agent_t *agent, candidate_t *candidat
     next_remote_id = priv_highest_remote_foundation (component);
     snprintf (candidate->foundation, ICE_CANDIDATE_MAX_FOUNDATION,
         "remote-%u", next_remote_id);
-    ICE_DEBUG("assign remote foundation, foundation=%s",candidate->foundation);
   }
 }
 
@@ -420,8 +419,8 @@ candidate_t *discovery_learn_remote_peer_reflexive_candidate(
 {
   candidate_t *candidate;
 
-  ICE_DEBUG("create peer reflexive candidate");
   print_address(remote_address);
+  print_candidate(remote, "find candidate");
 
   candidate = candidate_new(ICE_CANDIDATE_TYPE_PEER_REFLEXIVE);
   if ( candidate == NULL )
@@ -738,7 +737,7 @@ void discovery_prune_stream(agent_t *agent, uint32_t stream_id)
     }
   }
 
-  ICE_DEBUG("FIXME: free discovery list");
+  /* FIXME: free discovery list */
   /*if (agent->discovery_list == NULL) {
     discovery_free (agent);
   }*/
@@ -764,6 +763,45 @@ void refresh_prune_stream(agent_t *agent, uint32_t stream_id)
 
 }
 
+void 
+discovery_free_item(candidate_discovery_t *cand)
+{
+   if (cand) free(cand);
+   return;
+}
+
+void
+discovery_free(agent_t *agent) 
+{
+  struct list_head *i, *n;
+
+  list_for_each_safe(i,n,&agent->discovery_list.list) {
+    candidate_discovery_t *cand = list_entry(i,candidate_discovery_t,list);
+    list_del(&cand->list);
+    discovery_free_item (cand);
+  }
 
 
+   return;
+}
 
+void
+refresh_free_item(candidate_refresh_t *cand) 
+{
+   //FIXME: free item
+   return;
+}
+
+void
+refresh_free(agent_t *agent) 
+{
+  struct list_head *i, *n;
+
+  list_for_each_safe(i,n,&agent->refresh_list.list) {
+    candidate_refresh_t *cand = list_entry(i,candidate_refresh_t,list);
+    list_del(&cand->list);
+    refresh_free_item (cand);
+  }
+
+   return;
+}
