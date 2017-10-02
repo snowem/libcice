@@ -124,10 +124,10 @@ stream_all_components_ready(const stream_t *stream)
     if ( component &&
 	     !(component->state == ICE_COMPONENT_STATE_CONNECTED ||
 	      component->state == ICE_COMPONENT_STATE_READY))
-      return ICE_FALSE;
+      return ICE_ERR;
   }
 
-  return ICE_TRUE;
+  return ICE_OK;
 }
 
 

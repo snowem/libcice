@@ -409,8 +409,9 @@ print_list(candidate_check_pair_t *pair) {
    ICE_DEBUG("list info");
    list_for_each(pos,&pair->list) {
       candidate_check_pair_t *p = list_entry(pos,candidate_check_pair_t,list);
-      ICE_DEBUG("pair info, priority=%lu,local=%s,remote=%s",
-            p->priority,p->local->foundation,p->remote->foundation);
+      ICE_DEBUG("pair info, pair=%p, priority=%lu,local=%s,remote=%s,buffer=%p",
+            p, p->priority,p->local->foundation,
+            p->remote->foundation,p->stun_message.buffer);
    }
    return;
 }
@@ -451,6 +452,7 @@ priv_limit_conn_check_list_size(candidate_check_pair_t *conncheck_list, uint32_t
 static void priv_add_new_check_pair (agent_t *agent, uint32_t stream_id, component_t *component, 
     candidate_t *local, candidate_t *remote, IceCheckState initial_state, int use_candidate)
 {
+  struct list_head *i;
   stream_t *stream;
   candidate_check_pair_t *pair;
 
@@ -481,14 +483,21 @@ static void priv_add_new_check_pair (agent_t *agent, uint32_t stream_id, compone
   pair->nominated = use_candidate;
   pair->controlling = agent->controlling_mode;
 
-  ICE_DEBUG("creating new pair, agent=%p, pair=%p,state=%d", agent, pair, initial_state);
+  ICE_DEBUG("--------------------------- creating new pair, agent=%p, pair=%p, buffer=%p, state=%d", 
+            agent, pair, pair->stun_message.buffer, initial_state);
   list_add(&pair->list,&stream->connchecks.list);
   list_sort(NULL,&stream->connchecks.list,conn_check_compare);
 
-  //print_list(&stream->connchecks);
+  //list_for_each(i,&stream->connchecks.list) {
+  //  candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
+  //  ICE_DEBUG("buffer info, buffer=%p",p->stun_message.buffer);
+  //}
+  print_list(&stream->connchecks);
   
   ICE_DEBUG("added a new conncheck, agent=%p, pair=%p, foundation=%s, nominated=%u, stream_id=%u", 
          agent, pair, pair->foundation, pair->nominated, stream_id);
+  print_candidate(local);
+  print_candidate(remote);
   /* stream->conncheck_list = g_slist_insert_sorted (stream->conncheck_list, pair,
       (GCompareFunc)conn_check_compare); */
 
@@ -634,11 +643,15 @@ conn_check_add_for_local_candidate(agent_t *agent,
   int added = 0;
   int ret = 0;
 
+
   if (local == NULL)
      return 0;
   
+  ICE_DEBUG("new candidate pairs, local=%p, added=%d",local, added);
+
   list_for_each(pos,&component->remote_candidates.list) {
     candidate_t *remote = list_entry(pos,candidate_t,list);
+    ICE_DEBUG("check new pair, ret=%d",ret);
     ret = conn_check_add_for_candidate_pair (agent, stream_id, component, local, remote);
     ICE_DEBUG("check new pair, ret=%d",ret);
     if (ret == ICE_OK) {
@@ -873,6 +886,7 @@ priv_prune_pending_checks(stream_t *stream, uint32_t component_id)
     candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
     if ( p->component_id == component_id && p->nominated == ICE_TRUE &&
          (p->state == ICE_CHECK_SUCCEEDED || p->state == ICE_CHECK_DISCOVERED) ){
+      ICE_DEBUG("verify priority, priority=%llu", p->priority);
       if (p->priority > highest_nominated_priority) {
         highest_nominated_priority = p->priority;
       }    
@@ -909,6 +923,7 @@ priv_prune_pending_checks(stream_t *stream, uint32_t component_id)
     }
   }
 
+  ICE_DEBUG("Agent XXX: Pruning pending checks, in_progress=%lu", in_progress);
   return in_progress;
 }
 
@@ -936,8 +951,8 @@ priv_update_check_list_state_for_ready(agent_t *agent, stream_t *stream, compone
    // step: search for at least one nominated pair
    list_for_each(i,&stream->connchecks.list) {
       candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
-      ICE_DEBUG("update check list, pair=%p, nominated=%u, state=%u, p-cid=%u, cid=%u", 
-             p, p->nominated, p->state, p->component_id, component->id);
+      ICE_DEBUG("update check list, pair=%p, nominated=%u, state=%u, p-cid=%u, cid=%u, prio=%llu", 
+             p, p->nominated, p->state, p->component_id, component->id, p->priority);
       if (p->component_id == component->id) {
          if (p->state == ICE_CHECK_SUCCEEDED ||
              p->state == ICE_CHECK_DISCOVERED) {
@@ -2149,7 +2164,7 @@ static void priv_conn_check_unfreeze_related (agent_t *agent, stream_t *stream, 
 
   /* step: perform the step (2) of 'Updating Pair States' */
   stream = agent_find_stream(agent, ok_check->stream_id);
-  if (stream_all_components_ready(stream)) {
+  if (stream_all_components_ready(stream) == ICE_OK) {
     /* step: unfreeze checks from other streams */
     list_for_each(i,&agent->streams.list) {
       stream_t *s = list_entry(i,stream_t,list);
@@ -2194,6 +2209,7 @@ priv_add_peer_reflexive_pair(agent_t *agent, uint32_t stream_id, uint32_t compon
   pair = ICE_MALLOC(candidate_check_pair_t);
   if ( pair == NULL )
      return NULL;
+  ICE_MEMZERO(pair,candidate_check_pair_t);
 
   stream = agent_find_stream(agent, stream_id);
   if ( stream == NULL )
@@ -2243,6 +2259,7 @@ priv_add_peer_reflexive_pair(agent_t *agent, uint32_t stream_id, uint32_t compon
  *
  * @return pointer to a new pair if one was created, otherwise NULL
  */
+// Renamed to priv_process_response_check_for_reflexive
 static candidate_check_pair_t*
 priv_process_response_check_for_peer_reflexive(agent_t *agent, stream_t *stream, 
     component_t *component, candidate_check_pair_t *p, socket_t *sockptr, 
@@ -2268,6 +2285,7 @@ priv_process_response_check_for_peer_reflexive(agent_t *agent, stream_t *stream,
         candidate_check_pair_t *pair = list_entry(i,candidate_check_pair_t,list);
         if (pair->local == cand && remote_candidate == pair->remote) {
           new_pair = pair;
+          ICE_DEBUG("Agent %p : got pair matched, pair=%p", agent, new_pair);
           break;
         }
       }
@@ -2279,7 +2297,7 @@ priv_process_response_check_for_peer_reflexive(agent_t *agent, stream_t *stream,
     /* note: this is same as "adding to VALID LIST" in the spec
        text */
     p->state = ICE_CHECK_SUCCEEDED;
-    ICE_DEBUG("Agent %p : conncheck %p SUCCEEDED.", agent, p);
+    ICE_DEBUG("Agent %p : conncheck %p SUCCEEDED, pair=%p", agent, p, new_pair);
     priv_conn_check_unfreeze_related(agent, stream, p);
   }
   else {
@@ -2296,10 +2314,12 @@ priv_process_response_check_for_peer_reflexive(agent_t *agent, stream_t *stream,
 
     /* step: add a new discovered pair (see RFC 5245 7.1.3.2.2
 	       "Constructing a Valid Pair") */
+    ICE_DEBUG("Agent %p : adding new pair, cand=%p", agent, cand);
     new_pair = priv_add_peer_reflexive_pair (agent, stream->id, component->id, cand, p);
     ICE_DEBUG("Agent %p : conncheck %p FAILED, %p DISCOVERED.", agent, p, new_pair);
   }
 
+  ICE_DEBUG("Agent %p : got pair matched, pair=%p", agent, new_pair);
   return new_pair;
 }
 
@@ -2331,6 +2351,7 @@ priv_map_reply_to_conn_check_request(agent_t *agent, stream_t *stream, component
   list_for_each(i,&stream->connchecks.list) {
     candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
 
+    ICE_DEBUG("buffer, pair=%p, buffer=%p", p, p->stun_message.buffer);
     if (p->stun_message.buffer) {
       stun_message_id(&p->stun_message, discovery_id);
 
@@ -2389,6 +2410,7 @@ priv_map_reply_to_conn_check_request(agent_t *agent, stream_t *stream, component
             ok_pair = priv_process_response_check_for_peer_reflexive (agent,
                 stream, component, p, sockptr, &sockaddr.addr,
                 local_candidate, remote_candidate);
+            ICE_DEBUG("Agent %p : got pair matched, pair=%p", agent, ok_pair);
           }
 
 

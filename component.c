@@ -156,7 +156,7 @@ component_update_selected_pair (component_t *component, const candidate_pair_t *
   }*/
 
   component_clear_selected_pair(component);
-
+  ICE_DEBUG("--------------------- set selected pair, local=%p, remote=%p", pair->local, pair->remote);
   component->selected_pair.local = pair->local;
   component->selected_pair.remote = pair->remote;
   component->selected_pair.priority = pair->priority;
