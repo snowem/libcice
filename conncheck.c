@@ -497,8 +497,6 @@ static void priv_add_new_check_pair (agent_t *agent, uint32_t stream_id, compone
          agent, pair, pair->foundation, pair->nominated, stream_id);
   print_candidate(local,"local");
   print_candidate(remote,"remote");
-  /* stream->conncheck_list = g_slist_insert_sorted (stream->conncheck_list, pair,
-      (GCompareFunc)conn_check_compare); */
 
   /* implement the hard upper limit for number of
      checks (see sect 5.7.3 ICE ID-19): */
@@ -2178,7 +2176,8 @@ priv_add_peer_reflexive_pair(agent_t *agent, uint32_t stream_id, uint32_t compon
   stream = agent_find_stream(agent, stream_id);
   if ( stream == NULL )
      return NULL;
-
+  
+  //FIXME: check whether pair already exists?
   pair->agent = agent;
   pair->stream_id = stream_id;
   pair->component_id = component_id;;
@@ -2186,7 +2185,10 @@ priv_add_peer_reflexive_pair(agent_t *agent, uint32_t stream_id, uint32_t compon
   pair->remote = parent_pair->remote;
   pair->sockptr = (socket_t*)local_cand->sockptr;
   pair->state = ICE_CHECK_DISCOVERED;
-  ICE_ERROR("new reflexive peer pair, foundation=%s(%p)", pair->remote->foundation, pair->remote);
+  ICE_ERROR("new reflexive peer pair, pair=%p, foundation=%s(%p)", 
+            pair, pair->remote->foundation, pair->remote);
+  print_candidate(local_cand,"local");
+  print_candidate(parent_pair->remote,"remote");
   snprintf (pair->foundation, ICE_CANDIDATE_PAIR_MAX_FOUNDATION, "%s:%s",
       local_cand->foundation, parent_pair->remote->foundation);
   //if (agent->controlling_mode == ICE_TRUE)
@@ -2199,6 +2201,11 @@ priv_add_peer_reflexive_pair(agent_t *agent, uint32_t stream_id, uint32_t compon
   pair->nominated = ICE_FALSE;
   pair->controlling = agent->controlling_mode;
   ICE_ERROR("added a new peer-discovered pair, f=%s, prio=%lu", pair->foundation, pair->priority);
+  
+  //FIXME: inherited nominated flag from parent?
+  pair->nominated = parent_pair->nominated;
+  ICE_ERROR("nominated flag inherited, nominated=%u, pair=%p, parent_pair=%p", 
+            pair->nominated, pair, parent_pair);
 
   //stream->conncheck_list = g_slist_insert_sorted (stream->conncheck_list, pair,
   //    (GCompareFunc)conn_check_compare);
@@ -2266,6 +2273,7 @@ priv_process_response_check_for_peer_reflexive(agent_t *agent, stream_t *stream,
     priv_conn_check_unfreeze_related(agent, stream, p);
   }
   else {
+    ICE_DEBUG("no local candidate found");
     candidate_t *cand =
       discovery_add_peer_reflexive_candidate(agent,
 					      stream->id,
@@ -2332,7 +2340,7 @@ priv_map_reply_to_conn_check_request(agent_t *agent, stream_t *stream, component
 
           candidate_check_pair_t *ok_pair = NULL;
 
-          ICE_DEBUG("Agent %p : conncheck %p MATCHED.", agent, p);
+          ICE_DEBUG("Agent %p : conncheck %p MATCHED, res=%u", agent, p, res);
           p->stun_message.buffer = NULL;
           p->stun_message.buffer_len = 0;
 
@@ -2372,6 +2380,7 @@ priv_map_reply_to_conn_check_request(agent_t *agent, stream_t *stream, component
                 " conncheck %p SUCCEEDED, nominated=%u.", agent, p, p->nominated);
             priv_conn_check_unfreeze_related(agent, stream, p);
           } else {
+            ICE_DEBUG("mapped address found, pair=%p",p);
             ok_pair = priv_process_response_check_for_peer_reflexive (agent,
                 stream, component, p, sockptr, &sockaddr.addr,
                 local_candidate, remote_candidate);
