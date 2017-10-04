@@ -173,7 +173,7 @@ esp32_destroy_event(event_ctx_t *ctx, event_into_t *ev) {
 #endif //USE_ESP32
 
 event_ctx_t*
-create_event_ctx(agent_t *agent) {
+create_event_ctx() {
   event_ctx_t *ctx = 0;
 
   ctx = (event_ctx_t*)malloc(sizeof(event_ctx_t));
@@ -181,7 +181,6 @@ create_event_ctx(agent_t *agent) {
     return NULL;
   }
   memset(ctx,0,sizeof(event_ctx_t));
-  ctx->agent = agent;
 
 #ifdef USE_LIBEVENT2
   ctx->base = event_base_new();
@@ -189,6 +188,9 @@ create_event_ctx(agent_t *agent) {
     ICE_ERROR("failed to create event_base");
     return NULL;
   }
+  ctx->dns_base = evdns_base_new(ctx->base, 1);
+  ICE_ERROR("dns_base=%p", ctx->dns_base);
+
   ctx->create_socket = libevent2_create_socket;
   ctx->destroy_socket = libevent2_destroy_socket;
   ctx->create_event = libevent2_create_event;

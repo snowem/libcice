@@ -63,8 +63,8 @@ extern "C" {
  *      to session bandwidth -> this is not yet implemented in NICE */
 
 #define ICE_AGENT_TIMER_TA_DEFAULT 20      /* timer Ta, msecs (impl. defined) */
-//#define ICE_AGENT_TIMER_TR_DEFAULT 25000   /* timer Tr, msecs (impl. defined) */
-#define ICE_AGENT_TIMER_TR_DEFAULT 25      /* timer Tr, secs (impl. defined) */
+#define ICE_AGENT_TIMER_TR_DEFAULT 25000   /* timer Tr, msecs (impl. defined) */
+//#define ICE_AGENT_TIMER_TR_DEFAULT 25      /* timer Tr, secs (impl. defined) */
 #define ICE_AGENT_TIMER_TR_MIN     15000   /* timer Tr, msecs (ICE ID-19) */
 #define ICE_AGENT_MAX_CONNECTIVITY_CHECKS_DEFAULT 100 /* see spec 5.7.3 (ID-19) */
 

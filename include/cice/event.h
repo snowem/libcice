@@ -51,6 +51,7 @@ struct _event_ctx {
 
 #ifdef USE_LIBEVENT2
   struct event_base   *base;
+  struct evdns_base   *dns_base;
 #endif
 
 #ifdef USE_ESP32

@@ -251,35 +251,6 @@ tcp_passive_socket_new(agent_t *agent, stream_t *stream,
    return sock;
 }
 
-socket_t*
-socket_new(IceSocketType type) {
-   socket_t *sock;
-
-   sock = ICE_MALLOC(socket_t);
-   if (sock == NULL) 
-      return NULL;
-
-   ICE_MEMZERO(sock,socket_t);
-   sock->type = type;
-   
-   return sock;
-}
-
-
-void
-socket_free(socket_t *sock)
-{
-  if (!sock) return;
-
-  if (sock->type == ICE_SOCKET_TYPE_UDP_BSD) {
-    event_del(sock->ev);
-  }
-  close(sock->fd);
-  ICE_FREE(sock);
-
-  return;
-}
-
 int
 udp_socket_send(socket_t *sock, const address_t *to, 
           const char *buf, size_t len)
@@ -323,15 +294,6 @@ tcp_active_socket_send(socket_t *sock, const address_t *to,
    ICE_DEBUG("FIXME: tcp_active_socket_send");
    return 0;
 }
-
-
-int
-socket_is_reliable(socket_t *sock)
-{
-   //FIXME: have different types of socket_t 
-   return 0;
-}
-
 
 
 

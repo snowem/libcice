@@ -146,6 +146,7 @@ ice_agent_new(event_ctx_t *base, IceCompatibility compat, int control_mode) {
 
    if (base != NULL) {
       agent->base = base;
+      base->agent = agent;
    } else {
       ICE_ERROR("no event base");
       free(agent);
