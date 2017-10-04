@@ -55,9 +55,9 @@ extern "C" {
 
 #include <event2/event.h>
 
-#include "address.h"
-#include "log.h"
-#include "types.h"
+#include "cice/address.h"
+#include "cice/log.h"
+#include "cice/types.h"
 
 typedef enum {
   ICE_SOCKET_TYPE_UDP_BSD,

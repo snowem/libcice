@@ -53,8 +53,8 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
-#include "types.h"
-#include "address.h"
+#include "cice/types.h"
+#include "cice/address.h"
 
 typedef enum
 {

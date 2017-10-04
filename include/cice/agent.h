@@ -52,12 +52,13 @@ extern "C" {
 #include <stdint.h>
 #include <sys/time.h>
 
-#include <event2/event.h>
-
-#include "list.h"
-#include "types.h"
-#include "stream.h"
-#include "discovery.h"
+//#include <event2/event.h>
+#include "cice/common.h"
+  
+#include "cice/discovery.h"
+#include "cice/list.h"
+#include "cice/types.h"
+#include "cice/stream.h"
 #include "stun/usages/ice.h"
 
 /* XXX: starting from ICE ID-18, Ta SHOULD now be set according

@@ -51,10 +51,10 @@ extern "C" {
 
 #include <stdint.h>
 
-#include "component.h"
-#include "conncheck.h"
-#include "list.h"
-#include "types.h"
+#include "cice/component.h"
+#include "cice/conncheck.h"
+#include "cice/list.h"
+#include "cice/types.h"
 
 
 /* Maximum and default sizes for ICE attributes, 

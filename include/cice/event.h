@@ -25,31 +25,43 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * @(#)utils.h
+ * @(#)event.h
  */
 
-#ifndef _ICE_UTILS_H_
-#define _ICE_UTILS_H_
+#ifndef _CICE_EVENT_H_
+#define _CICE_EVENT_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <time.h>
-#include "cice/log.h"
+#include "cice/types.h"
 
-#define MILLION_I 1000000
+typedef (void)(*event_callback_func)(int fd, short event, void *arg);
 
-void
-print_timeval(struct timeval *t);
+typedef (void)(*create_socket_func)(int fd, short port, int family);
+typedef (void)(*destroy_socket_func)(int fd, short port, int family);
+typedef (void)(*create_timer_func)(int fd);
+typedef (void)(*destroy_timer_func)(int fd);
 
-void
-add_microseconds_to_timeval(struct timeval *t, uint32_t microseconds);
+struct _event_info {
+};
+
+struct _event_ctx {
+  agent_t             *agent;
+  create_socket_func   create_socket;
+  destroy_socket_func  destroy_socket;
+};
+
+event_ctx_t*
+create_event_context();
+
+
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif //_ICE_UTILS_H_
+#endif //_CICE_EVENT_H_
 
 

@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include "list.h"
+#include "cice/list.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*(x)))
   

@@ -25,31 +25,38 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * @(#)utils.h
+ * @(#)common.h
  */
 
-#ifndef _ICE_UTILS_H_
-#define _ICE_UTILS_H_
+#ifndef _CICE_COMMON_H_
+#define _CICE_COMMON_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <time.h>
-#include "cice/log.h"
+#ifdef USE_LIBEVENT2
 
-#define MILLION_I 1000000
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
-void
-print_timeval(struct timeval *t);
+#include <event2/event.h>
+#include <event2/listener.h>
+#include <event2/bufferevent.h>
+#include <event2/buffer.h>
 
-void
-add_microseconds_to_timeval(struct timeval *t, uint32_t microseconds);
+#endif
+
+#ifdef USE_ESP32
+#endif
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif //_ICE_UTILS_H_
+#endif //_CICE_COMMON_H_
 
 

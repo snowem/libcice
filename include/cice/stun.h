@@ -58,7 +58,7 @@ extern "C" {
 #include <event2/bufferevent.h>
 #include <event2/buffer.h>
 
-#include "log.h"
+#include "cice/log.h"
 
 size_t
 is_stun_message(uint8_t *buffer, int len, int has_padding);

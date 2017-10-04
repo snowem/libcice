@@ -39,12 +39,7 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
-#include <event2/event.h>
-#include <event2/listener.h>
-#include <event2/bufferevent.h>
-#include <event2/buffer.h>
-
-#include "log.h"
+#include "cice/log.h"
 
 typedef struct _stream stream_t;
 typedef struct _component component_t;
@@ -59,6 +54,7 @@ typedef struct _candidate_discovery candidate_discovery_t;
 typedef struct _candidate_refresh candidate_refresh_t;
 typedef struct _candidate_check_pair candidate_check_pair_t;
 typedef struct _incoming_check incoming_check_t;
+typedef struct _event_ctx event_ctx_t;
 //typedef struct _stun_agent stun_agent_t;
 
 typedef void (*agent_recv_func) (agent_t *agent, uint32_t stream_id, 
