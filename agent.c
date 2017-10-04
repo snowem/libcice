@@ -123,7 +123,8 @@ agent_find_component(agent_t *agent, uint32_t stream_id, uint32_t component_id,
 }
 
 agent_t*
-ice_agent_new(struct event_base *base, IceCompatibility compat, int control_mode) {
+//ice_agent_new(struct event_base *base, IceCompatibility compat, int control_mode) {
+ice_agent_new(event_ctx_t *base, IceCompatibility compat, int control_mode) {
    agent_t *agent = NULL;
 
    agent = (agent_t*)malloc(sizeof(agent_t));
@@ -145,12 +146,20 @@ ice_agent_new(struct event_base *base, IceCompatibility compat, int control_mode
 
    if (base != NULL) {
       agent->base = base;
+   } else {
+      ICE_ERROR("no event base");
+      free(agent);
+      return NULL;
+   }
+
+   /*if (base != NULL) {
+      agent->base = base;
    } else if (g_base != NULL ) {
       ICE_DEBUG("use default event base");
       agent->base = g_base;
    } else {
       ICE_ERROR("no event base");
-   }
+   }*/
 
    /*FIXME: get from argument*/
    agent->reliable = 0; 
@@ -179,7 +188,8 @@ ice_agent_free(agent_t *agent) {
    }
    
    if (agent->keepalive_timer_ev) {
-      event_del(agent->keepalive_timer_ev);
+      //event_del(agent->keepalive_timer_ev);
+      destroy_event_info(agent->base, agent->keepalive_timer_ev);
       agent->keepalive_timer_ev = 0;
    }
 

@@ -46,11 +46,6 @@
 #include <errno.h>
 #include <unistd.h>
 
-#include <event2/event.h>
-#include <event2/listener.h>
-#include <event2/bufferevent.h>
-#include <event2/buffer.h>
-
 #include "cice/address.h"
 #include "cice/agent.h"
 #include "cice/network.h"
@@ -203,7 +198,16 @@ udp_bsd_socket_new(agent_t *agent, stream_t *stream, component_t *component,  ad
    socklen_t addrlen = 0;
    struct event *ev=0;
    int fd = 0;
-  
+
+   sock = create_socket(agent->base,ICE_SOCKET_TYPE_UDP_BSD, addr, socket_udp_read_cb);
+   //sock = socket_new(ICE_SOCKET_TYPE_UDP_BSD);
+   if (sock == NULL)
+      return NULL;
+   sock->agent = agent;
+   sock->stream = stream;
+   sock->component = component;
+   sock->addr = *addr;    
+ 
    if (addr->s.addr.sa_family == AF_INET) {
       fd = socket(AF_INET,SOCK_DGRAM,0);
       if (fd < 0) {
@@ -238,23 +242,18 @@ udp_bsd_socket_new(agent_t *agent, stream_t *stream, component_t *component,  ad
       ICE_DEBUG("binding ip6, addrlen=%u,port=%u", addrlen,addr->s.ip4.sin_port);
    }
 
-   sock = socket_new(ICE_SOCKET_TYPE_UDP_BSD);
-   if (sock == NULL)
-      return NULL;
-  
+
    //bev = bufferevent_socket_new(agent->base, 0, BEV_OPT_CLOSE_ON_FREE);
    ////bufferevent_setcb(bev, socket_udp_read_cb, NULL, socket_event_cb, agent);
    //bufferevent_enable(bev, EV_READ|EV_WRITE);
-
+   
+   //create_socket(base, socket, socket_udp_read_cb);
    ev = event_new(agent->base, fd, EV_READ|EV_PERSIST, socket_udp_read_cb, sock);
    event_add(ev, NULL);
 
-   sock->addr = *addr;    
-   sock->fd = fd;
    sock->ev = ev;
-   sock->agent = agent;
-   sock->stream = stream;
-   sock->component = component;
+
+   sock->fd = fd;
 
    ICE_DEBUG("create udp socket, fd=%u, agent=%p,stream=%p,component=%p",
          fd, agent,stream,component);
@@ -282,6 +281,7 @@ tcp_active_socket_new(agent_t *agent, stream_t *stream,
 
    sock->addr = *addr;    
 
+   //agent->base->create_event(base,sock, socket_udp_read_cb, write_cb, event_cb);
    fd = socket(AF_INET,SOCK_STREAM,0);
    evutil_make_socket_nonblocking(fd);
    bev = bufferevent_socket_new(agent->base, fd, BEV_OPT_CLOSE_ON_FREE);

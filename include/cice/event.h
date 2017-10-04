@@ -37,26 +37,83 @@ extern "C" {
 
 #include "cice/types.h"
 
-typedef (void)(*event_callback_func)(int fd, short event, void *arg);
+typedef enum {
+  ICE_SOCKET_TYPE_UDP_BSD,
+  ICE_SOCKET_TYPE_TCP_BSD,
+  ICE_SOCKET_TYPE_PSEUDOSSL,
+  ICE_SOCKET_TYPE_HTTP,
+  ICE_SOCKET_TYPE_SOCKS5,
+  ICE_SOCKET_TYPE_UDP_TURN,
+  ICE_SOCKET_TYPE_UDP_TURN_OVER_TCP,
+  ICE_SOCKET_TYPE_TCP_ACTIVE,
+  ICE_SOCKET_TYPE_TCP_PASSIVE,
+  ICE_SOCKET_TYPE_TCP_SO
+} IceSocketType;
 
-typedef (void)(*create_socket_func)(int fd, short port, int family);
-typedef (void)(*destroy_socket_func)(int fd, short port, int family);
-typedef (void)(*create_timer_func)(int fd);
-typedef (void)(*destroy_timer_func)(int fd);
 
-struct _event_info {
+
+struct _socket {
+   int   fd;
+   IceSocketType type;
+   /* TODO: abstract network layer 
+    * to support epoll, select, kqueue etc */
+   struct event *ev;
+   struct bufferevent *bev;
+   address_t addr;
+   void     *agent;
+   void     *stream;
+   void     *component;
 };
+
+
+typedef void (*event_callback_func)(int fd, short event, void *arg);
+
+typedef socket_t* (*create_socket_func)(event_ctx_t *ctx, socket_t* sock, event_callback_func cb);
+typedef void  (*destroy_socket_func)(int fd, short port, int family);
+typedef event_info_t* (*create_event_func)(event_ctx_t *ctx, int type, event_callback_func cb, int timeout);
+typedef void  (*destroy_event_func)(event_ctx_t *ctx, event_info_t *ev);
 
 struct _event_ctx {
   agent_t             *agent;
+
+#ifdef USE_LIBEVENT2
+  struct event_base   *base;
+#endif
+
+#ifdef USE_ESP32
+#endif
+
   create_socket_func   create_socket;
   destroy_socket_func  destroy_socket;
+  create_event_func   create_event;
+  destroy_event_func  destroy_event;
+};
+
+struct _event_info {
+  event_ctx_t         *ctx;
+#ifdef USE_LIBEVENT2
+  struct event        *ev;
+  event_callback_func  cb;
+#endif
+
+#ifdef USE_ESP32
+#endif
 };
 
 event_ctx_t*
-create_event_context();
+create_event_ctx();
 
+socket_t*
+create_socket(event_ctx_t *ctx, IceSocketType type, address_t *addr, event_callback_func cb);
 
+void
+destroy_socket(event_ctx_t *ctx, socket_t *sock);
+
+event_info_t*
+create_event_info(event_ctx_t *ctx, int type, event_callback_func cb, int timeout);
+
+void
+destroy_event_info(event_ctx_t *ctx, event_info_t *ev);
 
 #ifdef __cplusplus
 }

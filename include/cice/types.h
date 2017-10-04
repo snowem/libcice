@@ -55,7 +55,7 @@ typedef struct _candidate_refresh candidate_refresh_t;
 typedef struct _candidate_check_pair candidate_check_pair_t;
 typedef struct _incoming_check incoming_check_t;
 typedef struct _event_ctx event_ctx_t;
-//typedef struct _stun_agent stun_agent_t;
+typedef struct _event_info event_info_t;
 
 typedef void (*agent_recv_func) (agent_t *agent, uint32_t stream_id, 
     uint32_t component_id, char *buf, uint32_t len, void  *user_data);

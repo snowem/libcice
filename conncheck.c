@@ -1794,7 +1794,8 @@ priv_conn_check_tick_unlocked(agent_t *agent)
        the timer to be reset if we get a set_remote_candidates after this
        point */
     if ( agent->conncheck_timer_ev != NULL ) {
-       event_del(agent->conncheck_timer_ev);
+       //event_del(agent->conncheck_timer_ev);
+       destroy_event_info(agent->base, agent->conncheck_timer_ev);
        agent->conncheck_timer_ev = NULL;
     }
 
@@ -1832,7 +1833,8 @@ priv_conn_keepalive_tick(int fd, short event, void *arg) {
   ret = priv_conn_keepalive_tick_unlocked(agent);
   if (ret == ICE_FALSE) {
     if (agent->keepalive_timer_ev != NULL) {
-      event_del(agent->keepalive_timer_ev);
+      //event_del(agent->keepalive_timer_ev);
+      destroy_event_info(agent->base, agent->keepalive_timer_ev);
       agent->keepalive_timer_ev = NULL;
     }
   }
@@ -1847,8 +1849,8 @@ priv_conn_keepalive_tick(int fd, short event, void *arg) {
 int 
 conn_check_schedule_next(agent_t *agent)
 {
-  struct timeval schedule_interval, keepalive_interval;
-  struct event *schedule_ev, *keepalive_ev;
+  //struct timeval schedule_interval, keepalive_interval;
+  //struct event *schedule_ev, *keepalive_ev;
   int ret = priv_conn_check_unfreeze_next(agent);
 
   ICE_DEBUG("Agent %p : priv_conn_check_unfreeze_next returned %d", agent, ret);
@@ -1863,20 +1865,28 @@ conn_check_schedule_next(agent_t *agent)
 
   /* step: schedule timer if not running yet */
   if (ret == ICE_TRUE && agent->conncheck_timer_ev == NULL) {
-     schedule_interval.tv_sec = 0;
+     //agent->base->create_timer(base,priv_conn_check_tick,agent->timer_ta * 1000);
+     agent->conncheck_timer_ev = create_event_info(agent->base,EV_PERSIST,
+         priv_conn_check_tick,agent->timer_ta * 1000);
+
+     /*schedule_interval.tv_sec = 0;
      schedule_interval.tv_usec = agent->timer_ta * 1000;
      schedule_ev = event_new(agent->base,-1,EV_PERSIST,priv_conn_check_tick,agent);
      agent->conncheck_timer_ev = schedule_ev;
-     event_add(schedule_ev, &schedule_interval);
+     event_add(schedule_ev, &schedule_interval);*/
   }
 
   /* step: also start the keepalive timer */
   if (agent->keepalive_timer_ev == NULL) {
-     keepalive_interval.tv_sec = ICE_AGENT_TIMER_TR_DEFAULT;
+     //agent->base->create_timer(base,priv_conn_keepalive_tick,ICE_AGENT_TIMER_TR_DEFAULT);
+     agent->keepalive_timer_ev = create_event_info(agent->base,EV_PERSIST,
+         priv_conn_keepalive_tick,ICE_AGENT_TIMER_TR_DEFAULT);
+
+     /*keepalive_interval.tv_sec = ICE_AGENT_TIMER_TR_DEFAULT;
      keepalive_interval.tv_usec = 0;
      keepalive_ev = event_new(agent->base,-1,EV_PERSIST,priv_conn_keepalive_tick,agent);
      event_add(keepalive_ev, &keepalive_interval);
-     agent->keepalive_timer_ev = keepalive_ev;
+     agent->keepalive_timer_ev = keepalive_ev;*/
   }
 
   ICE_DEBUG("Agent %p : conn_check_schedule_next returning %d", agent, ret);

@@ -53,11 +53,7 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
-#include <event2/event.h>
-#include <event2/listener.h>
-#include <event2/bufferevent.h>
-#include <event2/buffer.h>
-
+#include "cice/common.h"
 #include "cice/log.h"
 
 size_t
