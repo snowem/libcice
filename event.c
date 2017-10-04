@@ -79,8 +79,14 @@ libevent2_init_udp_socket(socket_t *sock) {
   return;
 }
 
+void
+libevent2_init_tcp_socket(socket_t *sock) {
+  return;
+}
+
 socket_t*
 libevent2_create_socket(event_ctx_t *ctx, socket_t* sock, event_callback_func cb) {
+  struct event *ev = 0;
 
   if (!sock) return NULL;
 
@@ -88,9 +94,16 @@ libevent2_create_socket(event_ctx_t *ctx, socket_t* sock, event_callback_func cb
     case ICE_SOCKET_TYPE_UDP_BSD:
       libevent2_init_udp_socket(sock);
       break;
+    case ICE_SOCKET_TYPE_TCP_BSD:
+      libevent2_init_tcp_socket(sock);
+      break;
     default:
       return NULL;
   }
+
+   ev = event_new(ctx->base, sock->fd, EV_READ|EV_PERSIST, cb, sock); //socket_udp_read_cb
+   event_add(ev, NULL);
+   sock->ev = ev;
 
   return sock;
 }
@@ -205,6 +218,11 @@ create_socket(event_ctx_t *ctx, IceSocketType type, address_t *addr, event_callb
   return ctx->create_socket(ctx,sock,cb);
 }
 
+void
+destroy_socket(event_ctx_t *ctx, socket_t *sock) {
+  //FIXME
+  return;
+}
 
 event_info_t*
 create_event_info(event_ctx_t *ctx, int type, event_callback_func cb, int timeout) {
