@@ -38,6 +38,7 @@ extern "C" {
 #ifdef USE_LIBEVENT2
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/types.h>

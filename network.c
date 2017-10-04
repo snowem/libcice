@@ -49,6 +49,7 @@
 #include "cice/address.h"
 #include "cice/agent.h"
 #include "cice/network.h"
+#include "cice/socket.h"
 #include "cice/stun.h"
 
 int
@@ -247,14 +248,11 @@ udp_bsd_socket_new(agent_t *agent, stream_t *stream, component_t *component,  ad
    ////bufferevent_setcb(bev, socket_udp_read_cb, NULL, socket_event_cb, agent);
    //bufferevent_enable(bev, EV_READ|EV_WRITE);
    
-   //create_socket(base, socket, socket_udp_read_cb);
+   create_socket(base, socket, socket_udp_read_cb);
    ev = event_new(agent->base, fd, EV_READ|EV_PERSIST, socket_udp_read_cb, sock);
    event_add(ev, NULL);
-
    sock->ev = ev;
-
    sock->fd = fd;
-
    ICE_DEBUG("create udp socket, fd=%u, agent=%p,stream=%p,component=%p",
          fd, agent,stream,component);
 
