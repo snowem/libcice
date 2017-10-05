@@ -39,7 +39,9 @@ extern "C" {
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <ifaddrs.h>
 #include <netdb.h>
+#include <net/if.h>
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -52,6 +54,33 @@ extern "C" {
 #endif
 
 #ifdef USE_ESP32
+
+//#include <arpa/inet.h>
+//#include <netdb.h>
+//#include <netinet/in.h>
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+#include <lwip/sockets.h>
+#include <tcpip_adapter.h>
+
+//flags borrowed from libevents
+#define EV_TIMEOUT  0x01
+#define EV_READ     0x02
+#define EV_WRITE    0x04
+#define EV_SIGNAL   0x08
+#define EV_PERSIST  0x10
+#define EV_ET       0x20
+
+#ifndef IN6_ARE_ADDR_EQUAL
+#define IN6_ARE_ADDR_EQUAL(a,b) \
+ ((((__const uint32_t *) (a))[0] == ((__const uint32_t *) (b))[0]) \
+ && (((__const uint32_t *) (a))[1] == ((__const uint32_t *) (b))[1]) \
+ && (((__const uint32_t *) (a))[2] == ((__const uint32_t *) (b))[2]) \
+ && (((__const uint32_t *) (a))[3] == ((__const uint32_t *) (b))[3]))
+#endif //IN6_ARE_ADDR_EQUAL
+
 #endif
 
 #ifdef __cplusplus

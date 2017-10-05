@@ -34,6 +34,60 @@
 
 #include "cice/socket.h"
 
+typedef int (*recvfrom_func)(int sockfd, void *buf, size_t len, int flags, 
+                struct sockaddr *src_addr, socklen_t *addrlen);
+typedef int (*sendto_func)( int sockfd, const void *buf, size_t len, int flags,
+                      const struct sockaddr *dest_addr, socklen_t addrlen);   
+typedef int (*read_func)(int fd, void *buf, size_t count);   
+typedef int (*write_func)(int fd, const void *buf, size_t count);   
+
+#ifdef USE_LIBEVENT2
+int libevent2_recvfrom(int fd, void *buf, size_t len, int flags, 
+                struct sockaddr *src_addr, socklen_t *addrlen) {
+  return recvfrom(fd, buf, len, 0, src_addr, addrlen);
+}
+
+int libevent2_sendto(int sockfd, const void *buf, size_t len, int flags,
+                      const struct sockaddr *dest_addr, socklen_t addrlen) {
+  return 0;
+}
+
+int libevent2_read(int fd, void *buf, size_t count) {
+
+  return 0;
+}
+
+int libevent2_write(int fd, const void *buf, size_t count) {
+
+  return 0;
+}
+
+#endif //USE_LIBEVENT2
+
+#ifdef USE_ESP32
+int esp32_recvfrom(int fd, void *buf, size_t len, int flags, 
+                struct sockaddr *src_addr, socklen_t *addrlen) {
+  //FIXME: change it to FreeRTOS api
+  return recvfrom(fd, buf, len, 0, src_addr, addrlen);
+}
+
+int esp32_sendto(int sockfd, const void *buf, size_t len, int flags,
+                      const struct sockaddr *dest_addr, socklen_t addrlen) {
+  return 0;
+}
+
+int esp32_read(int fd, void *buf, size_t count) {
+
+  return 0;
+}
+
+int esp32_write(int fd, const void *buf, size_t count) {
+
+  return 0;
+}
+
+#endif //USE_ESP32
+
 socket_t*
 socket_new(IceSocketType type) {
    socket_t *sock;
@@ -45,6 +99,20 @@ socket_new(IceSocketType type) {
    ICE_MEMZERO(sock,socket_t);
    sock->type = type;
    
+#ifdef USE_LIBEVENT2
+   sock->_recvfrom = libevent2_recvfrom;
+   sock->_sendto = libevent2_sendto;
+   sock->_read = libevent2_read;
+   sock->_write = libevent2_write;
+#endif //USE_LIBEVENT2
+
+#ifdef USE_ESP32
+   sock->_recvfrom = esp32_recvfrom;
+   sock->_sendto = esp32_sendto;
+   sock->_read = esp32_read;
+   sock->_write = esp32_write;
+#endif //USE_ESP32
+
    return sock;
 }
 
@@ -54,9 +122,11 @@ socket_free(socket_t *sock)
 {
   if (!sock) return;
 
-  if (sock->type == ICE_SOCKET_TYPE_UDP_BSD) {
+  //FIXME: socket_free should be replaced by destroy_socket.
+  /*if (sock->type == ICE_SOCKET_TYPE_UDP_BSD) {
     event_del(sock->ev);
-  }
+  }*/
+
   close(sock->fd);
   ICE_FREE(sock);
 

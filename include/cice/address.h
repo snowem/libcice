@@ -42,8 +42,8 @@
  * Jackie Dinh - 2016
  */
 
-#ifndef _ICE_ADDRESS_H_
-#define _ICE_ADDRESS_H_
+#ifndef _CICE_ADDRESS_H_
+#define _CICE_ADDRESS_H_
 
 #ifdef __cplusplus
 extern "C" {

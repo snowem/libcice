@@ -51,6 +51,13 @@ typedef enum {
   ICE_SOCKET_TYPE_TCP_SO
 } IceSocketType;
 
+typedef int (*recvfrom_func)(int sockfd, void *buf, size_t len, int flags, 
+                struct sockaddr *src_addr, socklen_t *addrlen);
+typedef int (*sendto_func)( int sockfd, const void *buf, size_t len, int flags,
+                      const struct sockaddr *dest_addr, socklen_t addrlen);   
+typedef int (*read_func)(int fd, void *buf, size_t count);   
+typedef int (*write_func)(int fd, const void *buf, size_t count);   
+
 struct _socket {
    int   fd;
    IceSocketType type;
@@ -59,6 +66,11 @@ struct _socket {
    void     *stream;
    void     *component;
 
+   //define abstract methods
+   recvfrom_func _recvfrom;
+   sendto_func   _sendto;
+   read_func     _read;
+   write_func    _write;
 
 #ifdef USE_LIBEVENT2
    /* TODO: abstract network layer 

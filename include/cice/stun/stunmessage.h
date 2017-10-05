@@ -73,7 +73,7 @@ extern "C" {
 #include <arpa/inet.h>
 #endif
 
-#include "constants.h"
+#include "cice/stun/constants.h"
 
 
 typedef struct _StunMessage StunMessage;
@@ -497,7 +497,7 @@ typedef enum
   STUN_MESSAGE_RETURN_UNSUPPORTED_ADDRESS
 } StunMessageReturn;
 
-#include "stunagent.h"
+#include "cice/stun/stunagent.h"
 
 /**
  * STUN_MAX_MESSAGE_SIZE:

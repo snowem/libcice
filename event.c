@@ -159,17 +159,18 @@ esp32_destroy_socket(int fd, short port, int family) {
   return;
 }
 
-event_into_t*
+event_info_t*
 esp32_create_event(event_ctx_t *ctx, int type, event_callback_func cb, int timeout) {
 
   return NULL;
 }
 
 void
-esp32_destroy_event(event_ctx_t *ctx, event_into_t *ev) {
+esp32_destroy_event(event_ctx_t *ctx, event_info_t *ev) {
 
   return;
 }
+
 #endif //USE_ESP32
 
 event_ctx_t*
@@ -199,7 +200,7 @@ create_event_ctx() {
 
 #ifdef USE_ESP32
   ctx->create_socket = esp32_create_socket;
-  ctx->destroy_event = esp32_destroy_socket;
+  ctx->destroy_socket = esp32_destroy_socket;
   ctx->create_event = esp32_create_event;
   ctx->destroy_event = esp32_destroy_event;
 #endif

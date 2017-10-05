@@ -42,7 +42,7 @@
  * @brief STUN client generic utility functions
  */
 
-#include "stunmessage.h"
+#include "cice/stun/stunmessage.h"
 
 #ifdef _WIN32
 #include <winsock2.h>

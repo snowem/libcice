@@ -31,7 +31,7 @@
  * case the provisions of LGPL are applicable instead of those above. If you
  * wish to allow use of your version of this file only under the terms of the
  * LGPL and not to allow others to use your version of this file under the
- * MPL, indicate your decision by deleting the provisions above and replace
+* MPL, indicate your decision by deleting the provisions above and replace
  * them with the notice and other provisions required by the LGPL. If you do
  * not delete the provisions above, a recipient may use your version of this
  * file under either the MPL or the LGPL.
@@ -88,7 +88,6 @@ stun_recv_message(socket_t *sock, address_t* from, char *buf, int len) {
       //HEXDUMP(buf,len,"msg");
       if ( component->io_callback ) {
          //ICE_DEBUG("call user-defined callback");
-         //janus_ice_cb_nice_recv
          //typedef void (*agent_recv_func) (agent_t *agent, uint32_t stream_id, 
          //              uint32_t component_id, char *buf, uint32_t len, void  *user_data);
          component->io_callback(agent,stream->id,component->id, buf, len, component->io_data);
@@ -102,7 +101,7 @@ stun_recv_message(socket_t *sock, address_t* from, char *buf, int len) {
 }
 
 static void 
-socket_udp_read_cb(evutil_socket_t fd, short what, void *ctx)
+socket_udp_read_cb(int fd, short what, void *ctx)
 {
    static char buf[MAX_BUF_SIZE] = {0};
    socket_t *sock = (socket_t*)ctx;;
@@ -115,7 +114,8 @@ socket_udp_read_cb(evutil_socket_t fd, short what, void *ctx)
    memset(&remaddr, 0, sizeof(remaddr));
    addrlen = sizeof(remaddr);
 
-   recvlen = recvfrom(fd, buf, MAX_BUF_SIZE, 0, (struct sockaddr*)&remaddr, &addrlen);
+   //recvlen = recvfrom(fd, buf, MAX_BUF_SIZE, 0, (struct sockaddr*)&remaddr, &addrlen);
+   recvlen = sock->_recvfrom(fd, buf, MAX_BUF_SIZE, 0, (struct sockaddr*)&remaddr, &addrlen);
 
    ICE_DEBUG("Receive data, fd=%u, ip=%u, port=%u, recvlen: %ld", 
         fd, remaddr.sin_addr.s_addr, ntohs(remaddr.sin_port), recvlen);
@@ -155,7 +155,8 @@ socket_udp_read_cb(evutil_socket_t fd, short what, void *ctx)
    return;
 }
 
-
+//FIXME: tcp data read cb
+/*
 static void 
 socket_tcp_read_cb(struct bufferevent *bev, void *ctx) {
    static char data[4*1024]={0};
@@ -192,6 +193,7 @@ void socket_event_cb(struct bufferevent *bev, short events, void *ctx)
 
    return;
 }
+*/
 
 socket_t*
 udp_bsd_socket_new(agent_t *agent, stream_t *stream, component_t *component,  address_t *addr) {

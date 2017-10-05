@@ -770,17 +770,6 @@ done:
   return ret;
 }
 
-/*int
-static struct event_base *g_base = NULL;
-ice_init() {
-   g_base = event_base_new();
-   if (g_base == NULL ) {
-      ICE_ERROR("failed to create event_base");
-      return ICE_ERR;
-   }
-   return ICE_OK;
-}*/
-
 int
 ice_agent_set_remote_credentials(agent_t *agent, uint32_t stream_id, 
             const char *ufrag, const char *pwd)
@@ -1485,7 +1474,7 @@ ice_agent_get_remote_candidates(agent_t *agent, uint32_t stream_id, uint32_t com
 {
   component_t *component;
   struct list_head *item;
-  candidate_t *ret;
+  candidate_t *ret = 0;
 
   if ( agent == NULL || stream_id < 1 || component_id < 1 ) {
      return NULL;

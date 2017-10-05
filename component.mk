@@ -11,4 +11,4 @@ COMPONENT_ADD_INCLUDEDIRS := include
 
 #EXTRA_CFLAGS := -DICACHE_RODATA_ATTR
 #CFLAGS += -Wno-error=implicit-function-declaration -Wno-error=format= -DHAVE_CONFIG_H
-CFLAGS += -Wno-char-subscripts
+CFLAGS += -DUSE_ESP32 -Wno-char-subscripts

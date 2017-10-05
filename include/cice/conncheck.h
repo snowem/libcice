@@ -58,9 +58,9 @@ extern "C" {
 #include "cice/list.h"
 #include "cice/log.h"
 #include "cice/types.h"
-#include "stun/constants.h"
-#include "stun/usages/timer.h"
-#include "stun/stunmessage.h"
+#include "cice/stun/constants.h"
+#include "cice/stun/usages/timer.h"
+#include "cice/stun/stunmessage.h"
 
 typedef enum
 {

@@ -67,7 +67,7 @@ extern "C" {
 
 #include <sys/types.h>
 
-#include "stunagent.h"
+#include "cice/stunagent.h"
 
 /**
  * StunAgent:
@@ -76,8 +76,8 @@ extern "C" {
  */
 typedef struct stun_agent_t StunAgent;
 
-#include "stunmessage.h"
-#include "debug.h"
+#include "cice/stun/stunmessage.h"
+#include "cice/stun/debug.h"
 
 /**
  * StunCompatibility:

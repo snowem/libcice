@@ -282,7 +282,8 @@ ice_component_close(component_t *c) {
   }
   sock = (socket_t*)c->sock;
   ICE_DEBUG("component close, fd=%d, sid=%u, cid=%u", sock->fd, c->stream->id, c->id);
-  event_del(sock->ev);
+  //FIXME: replace this by destroy_socket().
+  //event_del(sock->ev);
   sock->agent = 0;
   sock->stream = 0;
   sock->component = 0;

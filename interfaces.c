@@ -43,20 +43,15 @@
  */
 
 
-#include <ifaddrs.h>
-#include <netdb.h>
-#include <net/if.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-
+#include "cice/common.h"
 #include "cice/interfaces.h"
 
+#ifdef USE_LIBEVENT2
 static char *
 sockaddr_to_string(const struct sockaddr *addr)
 {
-  char addr_as_string[INET6_ADDRSTRLEN+1];
+  char addr_as_string[INET6_ADDRSTRLEN+1] = {0};
   size_t addr_len;
-
   switch (addr->sa_family) {
     case AF_INET: addr_len = sizeof (struct sockaddr_in); break;
     case AF_INET6: addr_len = sizeof (struct sockaddr_in6); break;
@@ -68,7 +63,6 @@ sockaddr_to_string(const struct sockaddr *addr)
           NI_NUMERICHOST) != 0) {
     return NULL;
   }
-
   return strdup(addr_as_string);
 }
 
@@ -102,7 +96,6 @@ ice_interfaces_is_private_ip (const struct sockaddr *_sa)
   
   return 0;
 }
-
 
 struct list_head*
 ice_interfaces_get_local_ips (struct list_head *head, int include_loopback)
@@ -176,5 +169,40 @@ ice_interfaces_get_local_ips (struct list_head *head, int include_loopback)
  
   return NULL;
 }
+#endif //ESP32
 
+#ifdef USE_ESP32
+struct list_head*
+ice_interfaces_get_local_ips (struct list_head *head, int include_loopback)
+{
+  address_t *addr = NULL;
+  char *addr_string = NULL;
+  tcpip_adapter_ip_info_t ip_info;
+
+  if (head == NULL) 
+     return NULL;
+  
+  ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info));
+  ICE_DEBUG("IP Address:  %s\n", ip4addr_ntoa(&ip_info.ip));
+  ICE_DEBUG("Subnet mask: %s\n", ip4addr_ntoa(&ip_info.netmask));
+  ICE_DEBUG("Gateway:     %s\n", ip4addr_ntoa(&ip_info.gw));
+
+  addr_string = strdup(ip4addr_ntoa(&ip_info.ip));
+  ICE_DEBUG("IP Address: %s", addr_string);
+
+  addr = address_new();
+  if (address_set_from_string(addr, addr_string) == ICE_OK) {
+    ICE_DEBUG("add local address, addr=%s",addr_string);
+    list_add(&addr->list,head);
+  } else {
+    ICE_ERROR("failed to parse local address, addr=%s",addr_string);
+    address_free(addr);
+  }
+
+  if (addr_string != NULL)
+    free(addr_string);
+
+  return NULL; //FIXME: return list head.
+}
+#endif //ESP32
 
