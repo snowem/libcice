@@ -73,7 +73,6 @@ _transport_to_string (IceCandidateTransport type) {
   }
 }
 
-static struct event_base *g_base = NULL;
 
 stream_t *
 agent_find_stream(agent_t *agent, uint32_t stream_id)
@@ -771,7 +770,8 @@ done:
   return ret;
 }
 
-int
+/*int
+static struct event_base *g_base = NULL;
 ice_init() {
    g_base = event_base_new();
    if (g_base == NULL ) {
@@ -779,7 +779,7 @@ ice_init() {
       return ICE_ERR;
    }
    return ICE_OK;
-}
+}*/
 
 int
 ice_agent_set_remote_credentials(agent_t *agent, uint32_t stream_id, 
