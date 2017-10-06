@@ -454,7 +454,6 @@ priv_limit_conn_check_list_size(candidate_check_pair_t *conncheck_list, uint32_t
 static void priv_add_new_check_pair (agent_t *agent, uint32_t stream_id, component_t *component, 
     candidate_t *local, candidate_t *remote, IceCheckState initial_state, int use_candidate)
 {
-  struct list_head *i;
   stream_t *stream;
   candidate_check_pair_t *pair;
 

@@ -50,8 +50,7 @@ struct _event_ctx {
   agent_t             *agent;
 
 #ifdef USE_LIBEVENT2
-  struct event_base   *base;
-  struct evdns_base   *dns_base;
+  struct event_base   *ev_base;
 #endif
 
 #ifdef USE_ESP32
@@ -75,7 +74,7 @@ struct _event_info {
 };
 
 event_ctx_t*
-create_event_ctx();
+create_event_ctx(void *data);
 
 socket_t*
 create_socket(event_ctx_t *ctx, IceSocketType type, address_t *addr, event_callback_func cb);

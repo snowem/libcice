@@ -101,7 +101,7 @@ libevent2_create_socket(event_ctx_t *ctx, socket_t* sock, event_callback_func cb
       return NULL;
   }
 
-   ev = event_new(ctx->base, sock->fd, EV_READ|EV_PERSIST, cb, sock); //socket_udp_read_cb
+   ev = event_new(ctx->ev_base, sock->fd, EV_READ|EV_PERSIST, cb, sock); //socket_udp_read_cb
    event_add(ev, NULL);
    sock->ev = ev;
 
@@ -131,7 +131,7 @@ libevent2_create_event(event_ctx_t *ctx, int type, event_callback_func cb, int t
   ev->ctx = ctx;
   time_interval.tv_sec = 0;
   time_interval.tv_usec = timeout;
-  time_ev = event_new(ctx->agent->base->base,-1,type,cb,ctx->agent);
+  time_ev = event_new(ctx->ev_base,-1,type,cb,ctx->agent);
   event_add(time_ev, &time_interval);
   ev->ev = time_ev;
 
@@ -173,8 +173,10 @@ esp32_destroy_event(event_ctx_t *ctx, event_info_t *ev) {
 
 #endif //USE_ESP32
 
+#ifdef USE_LIBEVENT2
 event_ctx_t*
-create_event_ctx() {
+create_event_ctx(void *data) {
+  struct event_base *ev_base = (struct event_base*)data;
   event_ctx_t *ctx = 0;
 
   ctx = (event_ctx_t*)malloc(sizeof(event_ctx_t));
@@ -183,30 +185,45 @@ create_event_ctx() {
   }
   memset(ctx,0,sizeof(event_ctx_t));
 
-#ifdef USE_LIBEVENT2
-  ctx->base = event_base_new();
-  if (ctx->base == NULL ) {
-    ICE_ERROR("failed to create event_base");
-    return NULL;
+  if (ev_base) {
+    ctx->ev_base = ev_base;
+  } else {
+    ctx->ev_base = event_base_new();
+    if (ctx->ev_base == NULL ) {
+      ICE_ERROR("failed to create event_base");
+      return NULL;
+    }
   }
-  ctx->dns_base = evdns_base_new(ctx->base, 1);
-  ICE_ERROR("dns_base=%p", ctx->dns_base);
 
   ctx->create_socket = libevent2_create_socket;
   ctx->destroy_socket = libevent2_destroy_socket;
   ctx->create_event = libevent2_create_event;
   ctx->destroy_event = libevent2_destroy_event;
+
+  return ctx;
+}
 #endif
 
+
 #ifdef USE_ESP32
+event_ctx_t*
+create_event_ctx(void *data) {
+  event_ctx_t *ctx = 0;
+
+  ctx = (event_ctx_t*)malloc(sizeof(event_ctx_t));
+  if (ctx == NULL) {
+    return NULL;
+  }
+  memset(ctx,0,sizeof(event_ctx_t));
+
   ctx->create_socket = esp32_create_socket;
   ctx->destroy_socket = esp32_destroy_socket;
   ctx->create_event = esp32_create_event;
   ctx->destroy_event = esp32_destroy_event;
-#endif
 
   return ctx;
 }
+#endif
 
 socket_t*
 create_socket(event_ctx_t *ctx, IceSocketType type, address_t *addr, event_callback_func cb) {
