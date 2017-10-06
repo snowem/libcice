@@ -243,10 +243,23 @@ static int stun_socket (int family, int type, int proto)
     return -1;
 
 #ifdef FD_CLOEXEC
+
+#ifdef USE_ESP32
+  fcntl (fd, F_SETFD, fcntl (fd, F_GETFD, 0) | FD_CLOEXEC);
+#else
   fcntl (fd, F_SETFD, fcntl (fd, F_GETFD) | FD_CLOEXEC);
 #endif
+
+#endif //FD_CLOEXEC
+
 #ifdef O_NONBLOCK
+
+#ifdef USE_ESP32
+  fcntl (fd, F_SETFL, fcntl (fd, F_GETFL, 0) | O_NONBLOCK);
+#else
   fcntl (fd, F_SETFL, fcntl (fd, F_GETFL) | O_NONBLOCK);
+#endif
+
 #elif defined _WIN32
   ioctlsocket(fd, FIONBIO, &set_nonblock);
 #endif

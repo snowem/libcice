@@ -54,13 +54,13 @@ extern "C" {
 #include <string.h>
 #include <time.h>
 
-#include "candidate.h"
-#include "list.h"
-#include "log.h"
-#include "stun/constants.h"
-#include "stun/usages/timer.h"
-#include "stun/stunmessage.h"
-#include "types.h"
+#include "cice/candidate.h"
+#include "cice/list.h"
+#include "cice/log.h"
+#include "cice/types.h"
+#include "cice/stun/constants.h"
+#include "cice/stun/usages/timer.h"
+#include "cice/stun/stunmessage.h"
 
 typedef enum
 {

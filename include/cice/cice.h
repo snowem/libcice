@@ -25,44 +25,52 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * @(#)utils.c
+ * @(#)cice.h
  */
 
+#ifndef _CICE_CICE_H_
+#define _CICE_CICE_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "cice/address.h"
+#include "cice/agent.h"
+#include "cice/base64.h"
+#include "cice/candidate.h"
+#include "cice/common.h"
+#include "cice/component.h"
+#include "cice/conncheck.h"
+#include "cice/discovery.h"
+#include "cice/event.h"
+#include "cice/interfaces.h"
+#include "cice/list.h"
+#include "cice/list_sort.h"
+#include "cice/log.h"
+#include "cice/network.h"
+#include "cice/socket.h"
+#include "cice/stream.h"
+#include "cice/stun/constants.h"
+#include "cice/stun/debug.h"
+#include "cice/stun/md5.h"
+#include "cice/stun/rand.h"
+#include "cice/stun/sha1.h"
+#include "cice/stun/stun5389.h"
+#include "cice/stun/stunagent.h"
+#include "cice/stun/stuncrc32.h"
+#include "cice/stun/stunhmac.h"
+#include "cice/stun/stunmessage.h"
+#include "cice/stun/utils.h"
+#include "cice/stun/usages/bind.h"
+#include "cice/stun/usages/ice.h"
+#include "cice/stun/usages/timer.h"
+#include "cice/stun/usages/turn.h"
+#include "cice/stunagent.h"
+#include "cice/stun.h"
+#include "cice/types.h"
 #include "cice/utils.h"
 
-/* resolve seconds carry */
-static inline void update_tv(struct timeval *t1)
-{
-  while (t1->tv_usec >= MILLION_I) {
-    t1->tv_sec++;
-    t1->tv_usec -= MILLION_I;
-  }
-  while (t1->tv_usec < 0) {
-    t1->tv_sec--;
-    t1->tv_usec += MILLION_I;
-  }
-}
-
-void
-add_microseconds_to_timeval(struct timeval *t, uint32_t microseconds) {
-   if (t == NULL )
-      return;
-   t->tv_usec += microseconds;
-   update_tv(t);
-}
-
-/*void timeval_add(struct timeval *t1, struct timeval *t2)
-{
-  t1->tv_sec += t2->tv_sec;
-  t1->tv_usec += t2->tv_usec;
-  update_tv(t1);
-}*/
-
-void
-print_timeval(struct timeval *t) {
-   if ( t != NULL )
-      ICE_DEBUG("timevale info, tv_sec=%lu, tv_usec=%lu",t->tv_sec,t->tv_usec);
-   return;
-}
+#endif //_CICE_CICE_H_
 
 

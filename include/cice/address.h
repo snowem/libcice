@@ -42,19 +42,19 @@
  * Jackie Dinh - 2016
  */
 
-#ifndef _ICE_ADDRESS_H_
-#define _ICE_ADDRESS_H_
+#ifndef _CICE_ADDRESS_H_
+#define _CICE_ADDRESS_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <netinet/in.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "types.h"
-#include "list.h"
+#include "cice/common.h"
+#include "cice/list.h"
+#include "cice/types.h"
 
 struct _address
 {

@@ -454,7 +454,6 @@ priv_limit_conn_check_list_size(candidate_check_pair_t *conncheck_list, uint32_t
 static void priv_add_new_check_pair (agent_t *agent, uint32_t stream_id, component_t *component, 
     candidate_t *local, candidate_t *remote, IceCheckState initial_state, int use_candidate)
 {
-  struct list_head *i;
   stream_t *stream;
   candidate_check_pair_t *pair;
 
@@ -497,8 +496,6 @@ static void priv_add_new_check_pair (agent_t *agent, uint32_t stream_id, compone
          agent, pair, pair->foundation, pair->nominated, stream_id);
   print_candidate(local,"local");
   print_candidate(remote,"remote");
-  /* stream->conncheck_list = g_slist_insert_sorted (stream->conncheck_list, pair,
-      (GCompareFunc)conn_check_compare); */
 
   /* implement the hard upper limit for number of
      checks (see sect 5.7.3 ICE ID-19): */
@@ -1796,7 +1793,8 @@ priv_conn_check_tick_unlocked(agent_t *agent)
        the timer to be reset if we get a set_remote_candidates after this
        point */
     if ( agent->conncheck_timer_ev != NULL ) {
-       event_del(agent->conncheck_timer_ev);
+       //event_del(agent->conncheck_timer_ev);
+       destroy_event_info(agent->base, agent->conncheck_timer_ev);
        agent->conncheck_timer_ev = NULL;
     }
 
@@ -1834,7 +1832,8 @@ priv_conn_keepalive_tick(int fd, short event, void *arg) {
   ret = priv_conn_keepalive_tick_unlocked(agent);
   if (ret == ICE_FALSE) {
     if (agent->keepalive_timer_ev != NULL) {
-      event_del(agent->keepalive_timer_ev);
+      //event_del(agent->keepalive_timer_ev);
+      destroy_event_info(agent->base, agent->keepalive_timer_ev);
       agent->keepalive_timer_ev = NULL;
     }
   }
@@ -1849,8 +1848,6 @@ priv_conn_keepalive_tick(int fd, short event, void *arg) {
 int 
 conn_check_schedule_next(agent_t *agent)
 {
-  struct timeval schedule_interval, keepalive_interval;
-  struct event *schedule_ev, *keepalive_ev;
   int ret = priv_conn_check_unfreeze_next(agent);
 
   ICE_DEBUG("Agent %p : priv_conn_check_unfreeze_next returned %d", agent, ret);
@@ -1865,20 +1862,14 @@ conn_check_schedule_next(agent_t *agent)
 
   /* step: schedule timer if not running yet */
   if (ret == ICE_TRUE && agent->conncheck_timer_ev == NULL) {
-     schedule_interval.tv_sec = 0;
-     schedule_interval.tv_usec = agent->timer_ta * 1000;
-     schedule_ev = event_new(agent->base,-1,EV_PERSIST,priv_conn_check_tick,agent);
-     agent->conncheck_timer_ev = schedule_ev;
-     event_add(schedule_ev, &schedule_interval);
+     agent->conncheck_timer_ev = create_event_info(agent->base,EV_PERSIST,
+         priv_conn_check_tick,agent->timer_ta * 1000);
   }
 
   /* step: also start the keepalive timer */
   if (agent->keepalive_timer_ev == NULL) {
-     keepalive_interval.tv_sec = ICE_AGENT_TIMER_TR_DEFAULT;
-     keepalive_interval.tv_usec = 0;
-     keepalive_ev = event_new(agent->base,-1,EV_PERSIST,priv_conn_keepalive_tick,agent);
-     event_add(keepalive_ev, &keepalive_interval);
-     agent->keepalive_timer_ev = keepalive_ev;
+     agent->keepalive_timer_ev = create_event_info(agent->base,EV_PERSIST,
+         priv_conn_keepalive_tick,ICE_AGENT_TIMER_TR_DEFAULT);
   }
 
   ICE_DEBUG("Agent %p : conn_check_schedule_next returning %d", agent, ret);
@@ -2178,7 +2169,8 @@ priv_add_peer_reflexive_pair(agent_t *agent, uint32_t stream_id, uint32_t compon
   stream = agent_find_stream(agent, stream_id);
   if ( stream == NULL )
      return NULL;
-
+  
+  //FIXME: check whether pair already exists?
   pair->agent = agent;
   pair->stream_id = stream_id;
   pair->component_id = component_id;;
@@ -2186,7 +2178,10 @@ priv_add_peer_reflexive_pair(agent_t *agent, uint32_t stream_id, uint32_t compon
   pair->remote = parent_pair->remote;
   pair->sockptr = (socket_t*)local_cand->sockptr;
   pair->state = ICE_CHECK_DISCOVERED;
-  ICE_ERROR("new reflexive peer pair, foundation=%s(%p)", pair->remote->foundation, pair->remote);
+  ICE_ERROR("new reflexive peer pair, pair=%p, foundation=%s(%p)", 
+            pair, pair->remote->foundation, pair->remote);
+  print_candidate(local_cand,"local");
+  print_candidate(parent_pair->remote,"remote");
   snprintf (pair->foundation, ICE_CANDIDATE_PAIR_MAX_FOUNDATION, "%s:%s",
       local_cand->foundation, parent_pair->remote->foundation);
   //if (agent->controlling_mode == ICE_TRUE)
@@ -2199,6 +2194,11 @@ priv_add_peer_reflexive_pair(agent_t *agent, uint32_t stream_id, uint32_t compon
   pair->nominated = ICE_FALSE;
   pair->controlling = agent->controlling_mode;
   ICE_ERROR("added a new peer-discovered pair, f=%s, prio=%lu", pair->foundation, pair->priority);
+  
+  //FIXME: inherited nominated flag from parent?
+  pair->nominated = parent_pair->nominated;
+  ICE_ERROR("nominated flag inherited, nominated=%u, pair=%p, parent_pair=%p", 
+            pair->nominated, pair, parent_pair);
 
   //stream->conncheck_list = g_slist_insert_sorted (stream->conncheck_list, pair,
   //    (GCompareFunc)conn_check_compare);
@@ -2266,6 +2266,7 @@ priv_process_response_check_for_peer_reflexive(agent_t *agent, stream_t *stream,
     priv_conn_check_unfreeze_related(agent, stream, p);
   }
   else {
+    ICE_DEBUG("no local candidate found");
     candidate_t *cand =
       discovery_add_peer_reflexive_candidate(agent,
 					      stream->id,
@@ -2332,7 +2333,7 @@ priv_map_reply_to_conn_check_request(agent_t *agent, stream_t *stream, component
 
           candidate_check_pair_t *ok_pair = NULL;
 
-          ICE_DEBUG("Agent %p : conncheck %p MATCHED.", agent, p);
+          ICE_DEBUG("Agent %p : conncheck %p MATCHED, res=%u", agent, p, res);
           p->stun_message.buffer = NULL;
           p->stun_message.buffer_len = 0;
 
@@ -2372,6 +2373,7 @@ priv_map_reply_to_conn_check_request(agent_t *agent, stream_t *stream, component
                 " conncheck %p SUCCEEDED, nominated=%u.", agent, p, p->nominated);
             priv_conn_check_unfreeze_related(agent, stream, p);
           } else {
+            ICE_DEBUG("mapped address found, pair=%p",p);
             ok_pair = priv_process_response_check_for_peer_reflexive (agent,
                 stream, component, p, sockptr, &sockaddr.addr,
                 local_candidate, remote_candidate);

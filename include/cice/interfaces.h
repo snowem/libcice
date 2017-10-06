@@ -53,8 +53,8 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
-#include "log.h"
-#include "address.h"
+#include "cice/address.h"
+#include "cice/log.h"
 
 struct list_head*
 ice_interfaces_get_local_ips (struct list_head *head, int include_loopback);

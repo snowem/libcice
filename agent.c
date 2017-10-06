@@ -73,7 +73,6 @@ _transport_to_string (IceCandidateTransport type) {
   }
 }
 
-static struct event_base *g_base = NULL;
 
 stream_t *
 agent_find_stream(agent_t *agent, uint32_t stream_id)
@@ -123,11 +122,12 @@ agent_find_component(agent_t *agent, uint32_t stream_id, uint32_t component_id,
 }
 
 agent_t*
-ice_agent_new(struct event_base *base, IceCompatibility compat, int control_mode) {
+ice_agent_new(event_ctx_t *base, IceCompatibility compat, int control_mode) {
    agent_t *agent = NULL;
 
    agent = (agent_t*)malloc(sizeof(agent_t));
    if (agent == NULL) {
+      ICE_ERROR("malloc error, size=%u", sizeof(agent_t));
       return NULL;
    }
    memset(agent,0,sizeof(agent_t));
@@ -145,11 +145,11 @@ ice_agent_new(struct event_base *base, IceCompatibility compat, int control_mode
 
    if (base != NULL) {
       agent->base = base;
-   } else if (g_base != NULL ) {
-      ICE_DEBUG("use default event base");
-      agent->base = g_base;
+      base->agent = agent;
    } else {
       ICE_ERROR("no event base");
+      free(agent);
+      return NULL;
    }
 
    /*FIXME: get from argument*/
@@ -179,7 +179,8 @@ ice_agent_free(agent_t *agent) {
    }
    
    if (agent->keepalive_timer_ev) {
-      event_del(agent->keepalive_timer_ev);
+      //event_del(agent->keepalive_timer_ev);
+      destroy_event_info(agent->base, agent->keepalive_timer_ev);
       agent->keepalive_timer_ev = 0;
    }
 
@@ -758,16 +759,6 @@ ice_agent_get_local_candidates(agent_t *agent, uint32_t stream_id, uint32_t comp
 
 done:
   return ret;
-}
-
-int
-ice_init() {
-   g_base = event_base_new();
-   if (g_base == NULL ) {
-      ICE_ERROR("failed to create event_base");
-      return ICE_ERR;
-   }
-   return ICE_OK;
 }
 
 int
@@ -1474,7 +1465,7 @@ ice_agent_get_remote_candidates(agent_t *agent, uint32_t stream_id, uint32_t com
 {
   component_t *component;
   struct list_head *item;
-  candidate_t *ret;
+  candidate_t *ret = 0;
 
   if ( agent == NULL || stream_id < 1 || component_id < 1 ) {
      return NULL;

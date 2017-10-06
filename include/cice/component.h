@@ -52,9 +52,9 @@ extern "C" {
 
 #include <stdint.h>
 
-#include "list.h"
-#include "types.h"
-#include "candidate.h"
+#include "cice/candidate.h"
+#include "cice/list.h"
+#include "cice/types.h"
 #include "stun/stunagent.h"
 #include "stun/usages/timer.h"
 

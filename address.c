@@ -42,8 +42,6 @@
  * Jackie Dinh - 2016
  */
 
-#include <arpa/inet.h>
-
 #include "cice/address.h"
 
 address_t*
@@ -188,6 +186,7 @@ address_set_from_sockaddr (address_t *addr, const struct sockaddr *sa) {
    return;
 }
 
+#ifdef USE_LIBEVENT2
 int
 address_set_from_string(address_t *addr, const char *str) {
   struct addrinfo hints;
@@ -208,6 +207,23 @@ address_set_from_string(address_t *addr, const char *str) {
   freeaddrinfo(res);
   return ICE_OK;
 }
+#endif //USE_LIBEVENT2
+
+#ifdef USE_ESP32
+int
+address_set_from_string(address_t *addr, const char *str) {
+  struct sockaddr_in sa; 
+
+  //FIXME: hardcode ip4 here.
+  memset(&sa,0,sizeof(sa));
+  sa.sin_len = 8;
+  sa.sin_family = AF_INET;
+  sa.sin_addr.s_addr = inet_addr(str);
+  address_set_from_sockaddr(addr, (struct sockaddr*)&sa);
+  return ICE_OK;
+}
+#endif //USE_ESP32
+
 
 int
 address_is_valid(const address_t *a) {

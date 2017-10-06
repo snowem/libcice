@@ -25,44 +25,78 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * @(#)utils.c
+ * @(#)socket.h
  */
 
-#include "cice/utils.h"
+#ifndef _CICE_SOCKET_H_
+#define _CICE_SOCKET_H_
 
-/* resolve seconds carry */
-static inline void update_tv(struct timeval *t1)
-{
-  while (t1->tv_usec >= MILLION_I) {
-    t1->tv_sec++;
-    t1->tv_usec -= MILLION_I;
-  }
-  while (t1->tv_usec < 0) {
-    t1->tv_sec--;
-    t1->tv_usec += MILLION_I;
-  }
-}
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "cice/address.h"
+#include "cice/types.h"
+
+typedef enum {
+  ICE_SOCKET_TYPE_UDP_BSD,
+  ICE_SOCKET_TYPE_TCP_BSD,
+  ICE_SOCKET_TYPE_PSEUDOSSL,
+  ICE_SOCKET_TYPE_HTTP,
+  ICE_SOCKET_TYPE_SOCKS5,
+  ICE_SOCKET_TYPE_UDP_TURN,
+  ICE_SOCKET_TYPE_UDP_TURN_OVER_TCP,
+  ICE_SOCKET_TYPE_TCP_ACTIVE,
+  ICE_SOCKET_TYPE_TCP_PASSIVE,
+  ICE_SOCKET_TYPE_TCP_SO
+} IceSocketType;
+
+typedef int (*recvfrom_func)(int sockfd, void *buf, size_t len, int flags, 
+                struct sockaddr *src_addr, socklen_t *addrlen);
+typedef int (*sendto_func)( int sockfd, const void *buf, size_t len, int flags,
+                      const struct sockaddr *dest_addr, socklen_t addrlen);   
+typedef int (*read_func)(int fd, void *buf, size_t count);   
+typedef int (*write_func)(int fd, const void *buf, size_t count);   
+
+struct _socket {
+   int   fd;
+   IceSocketType type;
+   address_t addr;
+   void     *agent;
+   void     *stream;
+   void     *component;
+
+   //define abstract methods
+   recvfrom_func _recvfrom;
+   sendto_func   _sendto;
+   read_func     _read;
+   write_func    _write;
+
+#ifdef USE_LIBEVENT2
+   /* TODO: abstract network layer 
+    * to support epoll, select, kqueue etc */
+   struct event *ev;
+   struct bufferevent *bev;
+#endif
+
+#ifdef USE_ESP32
+#endif
+
+};
+
+socket_t*
+socket_new(IceSocketType type);
 
 void
-add_microseconds_to_timeval(struct timeval *t, uint32_t microseconds) {
-   if (t == NULL )
-      return;
-   t->tv_usec += microseconds;
-   update_tv(t);
-}
+socket_free(socket_t *sock);
 
-/*void timeval_add(struct timeval *t1, struct timeval *t2)
-{
-  t1->tv_sec += t2->tv_sec;
-  t1->tv_usec += t2->tv_usec;
-  update_tv(t1);
-}*/
-
-void
-print_timeval(struct timeval *t) {
-   if ( t != NULL )
-      ICE_DEBUG("timevale info, tv_sec=%lu, tv_usec=%lu",t->tv_sec,t->tv_usec);
-   return;
+int
+socket_is_reliable(socket_t *sock);
+ 
+#ifdef __cplusplus
 }
+#endif
+
+#endif //_CICE_EVENT_H_
 
 

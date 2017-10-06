@@ -53,8 +53,12 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
-#include "types.h"
-#include "address.h"
+#ifdef USE_ESP32
+#include "lwip/sockets.h"
+#endif
+
+#include "cice/address.h"
+#include "cice/types.h"
 
 typedef enum
 {

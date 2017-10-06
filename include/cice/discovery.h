@@ -42,18 +42,18 @@
  * Jackie Dinh - 2016
  */
 
-#ifndef _ICE_DISCOVERY_H_
-#define _ICE_DISCOVERY_H_
+#ifndef _CICE_DISCOVERY_H_
+#define _CICE_DISCOVERY_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "candidate.h"
-#include "list.h"
-#include "stun/stunagent.h"
-#include "stun/usages/timer.h"
-#include "types.h"
+#include "cice/candidate.h"
+#include "cice/list.h"
+#include "cice/types.h"
+#include "cice/stun/stunagent.h"
+#include "cice/stun/usages/timer.h"
 
 typedef enum {
   HOST_CANDIDATE_SUCCESS,
