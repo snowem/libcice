@@ -270,7 +270,8 @@ udp_socket_send(socket_t *sock, const address_t *to,
    //print_address(to); 
    //HEXDUMP(buf,len,"udp_send");
 
-   n = sendto(sock->fd, buf, len, 0, &to->s.addr, get_address_length(to));
+   n = sock->_sendto(sock->fd, buf, len, 0, &to->s.addr, get_address_length(to));
+   //n = sendto(sock->fd, buf, len, 0, &to->s.addr, get_address_length(to));
    if ( n < 0 ) {
       ICE_ERROR("sendto error, ret=%d, fd=%d, len=%lu,",n,sock->fd,len);
       return ICE_ERR;

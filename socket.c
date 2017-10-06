@@ -47,9 +47,9 @@ int libevent2_recvfrom(int fd, void *buf, size_t len, int flags,
   return recvfrom(fd, buf, len, 0, src_addr, addrlen);
 }
 
-int libevent2_sendto(int sockfd, const void *buf, size_t len, int flags,
+int libevent2_sendto(int fd, const void *buf, size_t len, int flags,
                       const struct sockaddr *dest_addr, socklen_t addrlen) {
-  return 0;
+  return sendto(fd, buf, len, 0, dest_addr, addrlen);
 }
 
 int libevent2_read(int fd, void *buf, size_t count) {
@@ -71,9 +71,9 @@ int esp32_recvfrom(int fd, void *buf, size_t len, int flags,
   return recvfrom(fd, buf, len, 0, src_addr, addrlen);
 }
 
-int esp32_sendto(int sockfd, const void *buf, size_t len, int flags,
+int esp32_sendto(int fd, const void *buf, size_t len, int flags,
                       const struct sockaddr *dest_addr, socklen_t addrlen) {
-  return 0;
+  return sendto(fd, buf, len, 0, dest_addr, addrlen);
 }
 
 int esp32_read(int fd, void *buf, size_t count) {

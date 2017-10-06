@@ -39,6 +39,10 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef USE_ESP32
+#include "esp_heap_caps.h" //call heap_caps_malloc
+#endif
+
 #include "cice/log.h"
 
 typedef struct _stream stream_t;
@@ -86,11 +90,15 @@ typedef void (*agent_recv_func) (agent_t *agent, uint32_t stream_id,
 #define ICE_AGENT_MAX_REMOTE_CANDIDATES    25
       
 
-
 #define ICE_USE(p) (void)(p);
-#define ICE_MALLOC(type_) (type_*)malloc(sizeof(type_))
 #define ICE_FREE(p_) { if (p_!=NULL) free(p_); }
 #define ICE_MEMZERO(p_,type_) memset(p_,0,sizeof(type_))
+
+#ifdef USE_ESP32
+#define ICE_MALLOC(type_) (type_*)heap_caps_malloc(sizeof(type_), MALLOC_CAP_32BIT)
+#else
+#define ICE_MALLOC(type_) (type_*)malloc(sizeof(type_))
+#endif
 
 #define ICE_FALSE (0)
 #define ICE_TRUE (1)
@@ -127,7 +135,12 @@ typedef void (*agent_recv_func) (agent_t *agent, uint32_t stream_id,
 /* An upper limit to size of STUN packets handled (based on Ethernet
  * MTU and estimated typical sizes of ICE STUN packet */
 #define MAX_STUN_DATAGRAM_PAYLOAD    1300
+
+#ifdef USE_ESP32
+#define MAX_BUF_SIZE 4*1024
+#else
 #define MAX_BUF_SIZE 4*1024*1024
+#endif
 
 
 #ifdef __cplusplus
