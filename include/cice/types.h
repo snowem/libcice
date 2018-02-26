@@ -39,12 +39,11 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
-#include <event2/event.h>
-#include <event2/listener.h>
-#include <event2/bufferevent.h>
-#include <event2/buffer.h>
+#ifdef USE_ESP32
+#include "esp_heap_caps.h" //call heap_caps_malloc
+#endif
 
-#include "log.h"
+#include "cice/log.h"
 
 typedef struct _stream stream_t;
 typedef struct _component component_t;
@@ -59,7 +58,8 @@ typedef struct _candidate_discovery candidate_discovery_t;
 typedef struct _candidate_refresh candidate_refresh_t;
 typedef struct _candidate_check_pair candidate_check_pair_t;
 typedef struct _incoming_check incoming_check_t;
-//typedef struct _stun_agent stun_agent_t;
+typedef struct _event_ctx event_ctx_t;
+typedef struct _event_info event_info_t;
 
 typedef void (*agent_recv_func) (agent_t *agent, uint32_t stream_id, 
     uint32_t component_id, char *buf, uint32_t len, void  *user_data);
@@ -90,11 +90,15 @@ typedef void (*agent_recv_func) (agent_t *agent, uint32_t stream_id,
 #define ICE_AGENT_MAX_REMOTE_CANDIDATES    25
       
 
-
 #define ICE_USE(p) (void)(p);
-#define ICE_MALLOC(type_) (type_*)malloc(sizeof(type_))
 #define ICE_FREE(p_) { if (p_!=NULL) free(p_); }
 #define ICE_MEMZERO(p_,type_) memset(p_,0,sizeof(type_))
+
+#ifdef USE_ESP32
+#define ICE_MALLOC(type_) (type_*)heap_caps_malloc(sizeof(type_), MALLOC_CAP_32BIT)
+#else
+#define ICE_MALLOC(type_) (type_*)malloc(sizeof(type_))
+#endif
 
 #define ICE_FALSE (0)
 #define ICE_TRUE (1)
@@ -131,7 +135,12 @@ typedef void (*agent_recv_func) (agent_t *agent, uint32_t stream_id,
 /* An upper limit to size of STUN packets handled (based on Ethernet
  * MTU and estimated typical sizes of ICE STUN packet */
 #define MAX_STUN_DATAGRAM_PAYLOAD    1300
+
+#ifdef USE_ESP32
+#define MAX_BUF_SIZE 4*1024
+#else
 #define MAX_BUF_SIZE 4*1024*1024
+#endif
 
 
 #ifdef __cplusplus

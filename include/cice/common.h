@@ -25,44 +25,68 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * @(#)utils.c
+ * @(#)common.h
  */
 
-#include "cice/utils.h"
+#ifndef _CICE_COMMON_H_
+#define _CICE_COMMON_H_
 
-/* resolve seconds carry */
-static inline void update_tv(struct timeval *t1)
-{
-  while (t1->tv_usec >= MILLION_I) {
-    t1->tv_sec++;
-    t1->tv_usec -= MILLION_I;
-  }
-  while (t1->tv_usec < 0) {
-    t1->tv_sec--;
-    t1->tv_usec += MILLION_I;
-  }
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef USE_LIBEVENT2
+
+#include <arpa/inet.h>
+#include <errno.h>
+#include <ifaddrs.h>
+#include <netdb.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include <event2/event.h>
+#include <event2/listener.h>
+#include <event2/bufferevent.h>
+#include <event2/buffer.h>
+
+#endif
+
+#ifdef USE_ESP32
+
+//#include <arpa/inet.h>
+//#include <netdb.h>
+//#include <netinet/in.h>
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+#include <lwip/sockets.h>
+#include <tcpip_adapter.h>
+
+//flags borrowed from libevents
+#define EV_TIMEOUT  0x01
+#define EV_READ     0x02
+#define EV_WRITE    0x04
+#define EV_SIGNAL   0x08
+#define EV_PERSIST  0x10
+#define EV_ET       0x20
+
+#ifndef IN6_ARE_ADDR_EQUAL
+#define IN6_ARE_ADDR_EQUAL(a,b) \
+ ((((__const uint32_t *) (a))[0] == ((__const uint32_t *) (b))[0]) \
+ && (((__const uint32_t *) (a))[1] == ((__const uint32_t *) (b))[1]) \
+ && (((__const uint32_t *) (a))[2] == ((__const uint32_t *) (b))[2]) \
+ && (((__const uint32_t *) (a))[3] == ((__const uint32_t *) (b))[3]))
+#endif //IN6_ARE_ADDR_EQUAL
+
+#endif
+
+#ifdef __cplusplus
 }
+#endif
 
-void
-add_microseconds_to_timeval(struct timeval *t, uint32_t microseconds) {
-   if (t == NULL )
-      return;
-   t->tv_usec += microseconds;
-   update_tv(t);
-}
-
-/*void timeval_add(struct timeval *t1, struct timeval *t2)
-{
-  t1->tv_sec += t2->tv_sec;
-  t1->tv_usec += t2->tv_usec;
-  update_tv(t1);
-}*/
-
-void
-print_timeval(struct timeval *t) {
-   if ( t != NULL )
-      ICE_DEBUG("timevale info, tv_sec=%lu, tv_usec=%lu",t->tv_sec,t->tv_usec);
-   return;
-}
+#endif //_CICE_COMMON_H_
 
 

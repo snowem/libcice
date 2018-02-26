@@ -73,7 +73,6 @@ _transport_to_string (IceCandidateTransport type) {
   }
 }
 
-static struct event_base *g_base = NULL;
 
 stream_t *
 agent_find_stream(agent_t *agent, uint32_t stream_id)
@@ -123,11 +122,12 @@ agent_find_component(agent_t *agent, uint32_t stream_id, uint32_t component_id,
 }
 
 agent_t*
-ice_agent_new(struct event_base *base, IceCompatibility compat, int control_mode) {
+ice_agent_new(event_ctx_t *base, IceCompatibility compat, int control_mode) {
    agent_t *agent = NULL;
 
    agent = (agent_t*)malloc(sizeof(agent_t));
    if (agent == NULL) {
+      ICE_ERROR("malloc error, size=%u", sizeof(agent_t));
       return NULL;
    }
    memset(agent,0,sizeof(agent_t));
@@ -145,11 +145,11 @@ ice_agent_new(struct event_base *base, IceCompatibility compat, int control_mode
 
    if (base != NULL) {
       agent->base = base;
-   } else if (g_base != NULL ) {
-      ICE_DEBUG("use default event base");
-      agent->base = g_base;
+      base->agent = agent;
    } else {
       ICE_ERROR("no event base");
+      free(agent);
+      return NULL;
    }
 
    /*FIXME: get from argument*/
@@ -179,7 +179,8 @@ ice_agent_free(agent_t *agent) {
    }
    
    if (agent->keepalive_timer_ev) {
-      event_del(agent->keepalive_timer_ev);
+      //event_del(agent->keepalive_timer_ev);
+      destroy_event_info(agent->base, agent->keepalive_timer_ev);
       agent->keepalive_timer_ev = 0;
    }
 
@@ -417,7 +418,7 @@ ice_agent_gather_candidates (agent_t *agent, uint32_t stream_id) {
             while (res == HOST_CANDIDATE_CANT_CREATE_SOCKET) {
               ICE_DEBUG("trying to create host candidate, agent=%p, port=%u", agent, current_port);
               address_set_port (addr, current_port);
-              res =  discovery_add_local_host_candidate(agent, stream->id, cid,
+              res = discovery_add_local_host_candidate(agent, stream->id, cid,
                   addr, transport, &host_candidate);
               if (current_port > 0)
                  current_port++;
@@ -670,8 +671,13 @@ ice_agent_get_selected_pair (agent_t *agent, uint32_t stream_id,
   stream_t *stream;
   int ret = ICE_ERR;
 
-  if (stream_id < 1 || component_id < 1 || local == NULL || remote == NULL )
-     return ret;
+  ICE_DEBUG("getting selected pair, sid=%u, cid=%u, local=%p, remote=%p",
+            stream_id, component_id, local, remote);
+  if (stream_id < 1 || component_id < 1 || local == NULL || remote == NULL ) {
+    ICE_DEBUG("error in getting selected pair, sid=%u, cid=%u, local=%p, remote=%p",
+              stream_id, component_id, local, remote);
+    return ret;
+  }
 
   /* step: check that params specify an existing pair */
   ret = agent_find_component (agent, stream_id, component_id, &stream, &component);
@@ -680,11 +686,20 @@ ice_agent_get_selected_pair (agent_t *agent, uint32_t stream_id,
     goto done;
   }
 
+  ICE_DEBUG("error in getting selected pair, c=%p, local=%p, remote=%p",
+            component,
+            component->selected_pair.local,
+            component->selected_pair.remote);
+
   if (component->selected_pair.local && component->selected_pair.remote) {
     *local = component->selected_pair.local;
     *remote = component->selected_pair.remote;
+    ICE_DEBUG("get selected pair, local=%p, remote=%p", *local, *remote);
     ret = ICE_OK;
   }
+
+  ICE_DEBUG("error in getting selected pair, sid=%u, cid=%u, local=%p, remote=%p",
+            stream_id, component_id, local, remote);
 
 done:
   return ret;
@@ -744,16 +759,6 @@ ice_agent_get_local_candidates(agent_t *agent, uint32_t stream_id, uint32_t comp
 
 done:
   return ret;
-}
-
-int
-ice_init() {
-   g_base = event_base_new();
-   if (g_base == NULL ) {
-      ICE_ERROR("failed to create event_base");
-      return ICE_ERR;
-   }
-   return ICE_OK;
 }
 
 int
@@ -1460,7 +1465,7 @@ ice_agent_get_remote_candidates(agent_t *agent, uint32_t stream_id, uint32_t com
 {
   component_t *component;
   struct list_head *item;
-  candidate_t *ret;
+  candidate_t *ret = 0;
 
   if ( agent == NULL || stream_id < 1 || component_id < 1 ) {
      return NULL;

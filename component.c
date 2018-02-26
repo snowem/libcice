@@ -86,7 +86,6 @@ component_set_io_callback (component_t *component,
   if ( component == 0 )
      return;
 
-  ICE_ERROR("FIXME: set io callback");
   component->io_callback = cb;
   component->io_data = user_data;
  
@@ -143,7 +142,8 @@ component_update_selected_pair (component_t *component, const candidate_pair_t *
   if ( component == NULL || pair == NULL )
      return;
 
-  ICE_DEBUG("setting SELECTED PAIR for component, cid=%u, lfoundation=%s, rfoundation=%s ,prio:%lu", 
+  ICE_DEBUG("setting SELECTED PAIR for component, "
+            "cid=%u, lfoundation=%s, rfoundation=%s ,prio:%lu", 
       component->id, pair->local->foundation,
       pair->remote->foundation, pair->priority);
 
@@ -160,7 +160,7 @@ component_update_selected_pair (component_t *component, const candidate_pair_t *
   }*/
 
   component_clear_selected_pair(component);
-
+  ICE_DEBUG("set selected pair, local=%p, remote=%p", pair->local, pair->remote);
   component->selected_pair.local = pair->local;
   component->selected_pair.remote = pair->remote;
   component->selected_pair.priority = pair->priority;
@@ -282,7 +282,8 @@ ice_component_close(component_t *c) {
   }
   sock = (socket_t*)c->sock;
   ICE_DEBUG("component close, fd=%d, sid=%u, cid=%u", sock->fd, c->stream->id, c->id);
-  event_del(sock->ev);
+  //FIXME: replace this by destroy_socket().
+  //event_del(sock->ev);
   sock->agent = 0;
   sock->stream = 0;
   sock->component = 0;

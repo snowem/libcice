@@ -49,43 +49,14 @@
 extern "C" {
 #endif
 
-#include <netinet/in.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <event2/event.h>
-
-#include "address.h"
-#include "log.h"
-#include "types.h"
-
-typedef enum {
-  ICE_SOCKET_TYPE_UDP_BSD,
-  ICE_SOCKET_TYPE_TCP_BSD,
-  ICE_SOCKET_TYPE_PSEUDOSSL,
-  ICE_SOCKET_TYPE_HTTP,
-  ICE_SOCKET_TYPE_SOCKS5,
-  ICE_SOCKET_TYPE_UDP_TURN,
-  ICE_SOCKET_TYPE_UDP_TURN_OVER_TCP,
-  ICE_SOCKET_TYPE_TCP_ACTIVE,
-  ICE_SOCKET_TYPE_TCP_PASSIVE,
-  ICE_SOCKET_TYPE_TCP_SO
-} IceSocketType;
-
-
-
-struct _socket {
-   int   fd;
-   IceSocketType type;
-   /* TODO: abstract network layer 
-    * to support epoll, select, kqueue etc */
-   struct event *ev;
-   struct bufferevent *bev;
-   address_t addr;
-   void     *agent;
-   void     *stream;
-   void     *component;
-};
+#include "cice/address.h"
+#include "cice/common.h"
+#include "cice/event.h"
+#include "cice/log.h"
+#include "cice/types.h"
 
 socket_t*
 udp_bsd_socket_new(agent_t *agent, stream_t *stream, component_t *c,  address_t *addr);

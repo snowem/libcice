@@ -221,6 +221,8 @@ priv_add_local_candidate_pruned (agent_t *agent, uint32_t stream_id,
     }
   }
 
+  ICE_DEBUG("add new candidate, cand=%p",candidate);
+  print_candidate(candidate,"new");
   list_add(&candidate->list,&component->local_candidates.list);
   conn_check_add_for_local_candidate(agent, stream_id, component, candidate);
 
@@ -520,13 +522,17 @@ discovery_add_peer_reflexive_candidate( agent_t *agent, uint32_t stream_id,
   uint32_t component_id, address_t *address, socket_t *base_socket,
   candidate_t *local, candidate_t *remote)
 {
-  candidate_t *candidate;
-  component_t *component;
+  candidate_t *candidate = 0;
+  component_t *component = 0;
   stream_t *stream;
   int result;
 
-  if (!agent_find_component(agent, stream_id, component_id, &stream, &component))
+  result = agent_find_component(agent, stream_id, component_id, &stream, &component);
+  //if (!agent_find_component(agent, stream_id, component_id, &stream, &component)) {
+  if (result != ICE_OK) {
+    ICE_DEBUG("error in finding component, sid=%u, cid=%u", stream_id, component_id);
     return NULL;
+  }
 
   candidate = candidate_new(ICE_CANDIDATE_TYPE_PEER_REFLEXIVE);
   if (local)
@@ -545,6 +551,8 @@ discovery_add_peer_reflexive_candidate( agent_t *agent, uint32_t stream_id,
   candidate->addr = *address;
   candidate->sockptr = base_socket;
   candidate->base_addr = base_socket->addr;
+
+  ICE_DEBUG("Agent %p : --------------- cand=%p", agent, candidate);
 
   if (agent->compatibility == ICE_COMPATIBILITY_GOOGLE) {
     candidate->priority = candidate_jingle_priority(candidate);
@@ -579,8 +587,10 @@ discovery_add_peer_reflexive_candidate( agent_t *agent, uint32_t stream_id,
                            strlen(remote->username), &remote_size);
 
     new_username = (unsigned char*)malloc(local_size + remote_size);
-    if (new_username == NULL ) 
+    if (new_username == NULL ) {
+       ICE_DEBUG("--------------- error in malloc");
        return NULL;
+    }
     memset(new_username,0,local_size + remote_size);
 
     memcpy(new_username, decoded_local, local_size);
@@ -603,8 +613,9 @@ discovery_add_peer_reflexive_candidate( agent_t *agent, uint32_t stream_id,
   }
 
   result = priv_add_local_candidate_pruned(agent, stream_id, component, candidate);
-  if (result != ICE_TRUE) {
+  if (result != ICE_OK) {
     /* error: memory allocation, or duplicate candidate */
+    ICE_DEBUG("--------------- error in adding candidate, result=%d", result);
     candidate_free (candidate);
     candidate = NULL;
   }

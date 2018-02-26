@@ -42,8 +42,8 @@
  * Jackie Dinh - 2016
  */
 
-#ifndef _ICE_AGENT_H_
-#define _ICE_AGENT_H_
+#ifndef _CICE_AGENT_H_
+#define _CICE_AGENT_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,20 +52,19 @@ extern "C" {
 #include <stdint.h>
 #include <sys/time.h>
 
-#include <event2/event.h>
-
-#include "list.h"
-#include "types.h"
-#include "stream.h"
-#include "discovery.h"
+#include "cice/common.h"
+#include "cice/discovery.h"
+#include "cice/list.h"
+#include "cice/types.h"
+#include "cice/stream.h"
 #include "stun/usages/ice.h"
 
 /* XXX: starting from ICE ID-18, Ta SHOULD now be set according
  *      to session bandwidth -> this is not yet implemented in NICE */
 
 #define ICE_AGENT_TIMER_TA_DEFAULT 20      /* timer Ta, msecs (impl. defined) */
-//#define ICE_AGENT_TIMER_TR_DEFAULT 25000   /* timer Tr, msecs (impl. defined) */
-#define ICE_AGENT_TIMER_TR_DEFAULT 25      /* timer Tr, secs (impl. defined) */
+#define ICE_AGENT_TIMER_TR_DEFAULT 25000   /* timer Tr, msecs (impl. defined) */
+//#define ICE_AGENT_TIMER_TR_DEFAULT 25      /* timer Tr, secs (impl. defined) */
 #define ICE_AGENT_TIMER_TR_MIN     15000   /* timer Tr, msecs (ICE ID-19) */
 #define ICE_AGENT_MAX_CONNECTIVITY_CHECKS_DEFAULT 100 /* see spec 5.7.3 (ID-19) */
 
@@ -129,14 +128,19 @@ struct _agent
   int8_t use_ice_udp;
   int8_t use_ice_tcp;
   
-  struct event_base *base;
+  event_ctx_t *base;
+  //struct event_base *base;
   //NiceRNG *rng;                   /* FIXME: random number generator */
   //GQueue pending_signals;         /* FIXME: */
  
-  struct event *discovery_timer_ev; /* discovery timer event */
-  struct event *conncheck_timer_ev; /* conncheck timer event */
-  struct event *keepalive_timer_ev; /* keepalive timer event */
+  //struct event *discovery_timer_ev; /* discovery timer event */
+  //struct event *conncheck_timer_ev; /* conncheck timer event */
+  //struct event *keepalive_timer_ev; /* keepalive timer event */
   
+  event_info_t *discovery_timer_ev; /* discovery timer event */
+  event_info_t *conncheck_timer_ev; /* conncheck timer event */
+  event_info_t *keepalive_timer_ev; /* keepalive timer event */
+
   // callbacks 
   candidate_gathering_done_func candidate_gathering_done_cb;
   component_state_changed_func  component_state_changed_cb;
@@ -154,7 +158,8 @@ int
 ice_init();
 
 agent_t*
-ice_agent_new(struct event_base *base, IceCompatibility compat, int control_mode);
+//ice_agent_new(struct event_base *base, IceCompatibility compat, int control_mode);
+ice_agent_new(event_ctx_t *base, IceCompatibility compat, int control_mode);
 
 void
 ice_agent_free(agent_t *agent);

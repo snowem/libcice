@@ -36,7 +36,7 @@ extern "C" {
 #endif
 
 #include <time.h>
-#include "log.h"
+#include "cice/log.h"
 
 #define MILLION_I 1000000
 

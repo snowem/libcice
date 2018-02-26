@@ -29,7 +29,7 @@ file(GLOB_RECURSE data resources/*)
 add_library(cice SHARED ${sources_top} ${sources_stun} ${sources_stun_usage})
 
 # Just for example add some compiler flags.
-target_compile_options(cice PUBLIC -g -Wall)
+target_compile_options(cice PUBLIC -g -Wall -DUSE_LIBEVENT2)
 
 # This allows to include files relative to the root of the src directory with a <> pair
 target_include_directories(cice PUBLIC include)

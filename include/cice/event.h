@@ -25,44 +25,73 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * @(#)utils.c
+ * @(#)event.h
  */
 
-#include "cice/utils.h"
+#ifndef _CICE_EVENT_H_
+#define _CICE_EVENT_H_
 
-/* resolve seconds carry */
-static inline void update_tv(struct timeval *t1)
-{
-  while (t1->tv_usec >= MILLION_I) {
-    t1->tv_sec++;
-    t1->tv_usec -= MILLION_I;
-  }
-  while (t1->tv_usec < 0) {
-    t1->tv_sec--;
-    t1->tv_usec += MILLION_I;
-  }
-}
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "cice/agent.h"
+#include "cice/socket.h"
+#include "cice/types.h"
+
+typedef void (*event_callback_func)(int fd, short event, void *arg);
+
+typedef socket_t* (*create_socket_func)(event_ctx_t *ctx, socket_t* sock, event_callback_func cb);
+typedef void  (*destroy_socket_func)(int fd, short port, int family);
+typedef event_info_t* (*create_event_func)(event_ctx_t *ctx, int type, event_callback_func cb, int timeout);
+typedef void  (*destroy_event_func)(event_ctx_t *ctx, event_info_t *ev);
+
+struct _event_ctx {
+  agent_t             *agent;
+
+#ifdef USE_LIBEVENT2
+  struct event_base   *ev_base;
+#endif
+
+#ifdef USE_ESP32
+#endif
+
+  create_socket_func   create_socket;
+  destroy_socket_func  destroy_socket;
+  create_event_func   create_event;
+  destroy_event_func  destroy_event;
+};
+
+struct _event_info {
+  event_ctx_t         *ctx;
+#ifdef USE_LIBEVENT2
+  struct event        *ev;
+  event_callback_func  cb;
+#endif
+
+#ifdef USE_ESP32
+#endif
+};
+
+event_ctx_t*
+create_event_ctx(void *data);
+
+socket_t*
+create_socket(event_ctx_t *ctx, IceSocketType type, address_t *addr, event_callback_func cb);
 
 void
-add_microseconds_to_timeval(struct timeval *t, uint32_t microseconds) {
-   if (t == NULL )
-      return;
-   t->tv_usec += microseconds;
-   update_tv(t);
-}
+destroy_socket(event_ctx_t *ctx, socket_t *sock);
 
-/*void timeval_add(struct timeval *t1, struct timeval *t2)
-{
-  t1->tv_sec += t2->tv_sec;
-  t1->tv_usec += t2->tv_usec;
-  update_tv(t1);
-}*/
+event_info_t*
+create_event_info(event_ctx_t *ctx, int type, event_callback_func cb, int timeout);
 
 void
-print_timeval(struct timeval *t) {
-   if ( t != NULL )
-      ICE_DEBUG("timevale info, tv_sec=%lu, tv_usec=%lu",t->tv_sec,t->tv_usec);
-   return;
+destroy_event_info(event_ctx_t *ctx, event_info_t *ev);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif //_CICE_EVENT_H_
 
 

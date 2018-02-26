@@ -51,7 +51,7 @@ extern "C" {
 #endif
 # include <sys/types.h>
 
-#include "stunmessage.h"
+#include "cice/stun/stunmessage.h"
 /*
  * Computes the FINGERPRINT checksum of a STUN message.
  * @param msg pointer to the STUN message
