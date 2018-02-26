@@ -109,7 +109,17 @@ libevent2_create_socket(event_ctx_t *ctx, socket_t* sock, event_callback_func cb
 }
 
 void
-libevent2_destroy_socket(int fd, short port, int family) {
+libevent2_destroy_socket(event_ctx_t *ctx, socket_t* sock) {
+
+  if (!sock) return;
+
+  //FIXME: socket_free should be replaced by destroy_socket.
+  if (sock->type == ICE_SOCKET_TYPE_UDP_BSD) {
+    event_del(sock->ev);
+  }
+
+  close(sock->fd);
+  ICE_FREE(sock);
 
   return;
 }
@@ -154,7 +164,7 @@ esp32_create_socket(event_ctx_t *ctx, socket_t* sock, event_callback_func cb) {
 }
 
 void
-esp32_destroy_socket(int fd, short port, int family) {
+esp32_destroy_socket(event_ctx_t *ctx, socket_t* sock) {
 
   return;
 }

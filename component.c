@@ -263,6 +263,7 @@ component_set_selected_remote_candidate(agent_t *agent,
 
 void
 ice_component_close(component_t *c) {
+  agent_t *agent = (agent_t*)c->agent;
   struct list_head *n,*p; 
   socket_t *sock = 0;
 
@@ -282,13 +283,10 @@ ice_component_close(component_t *c) {
   }
   sock = (socket_t*)c->sock;
   ICE_DEBUG("component close, fd=%d, sid=%u, cid=%u", sock->fd, c->stream->id, c->id);
-  //FIXME: replace this by destroy_socket().
-  //event_del(sock->ev);
   sock->agent = 0;
   sock->stream = 0;
   sock->component = 0;
-  socket_free(sock);
-
+  agent->base->destroy_socket(agent->base,sock);
 
   return;
 }

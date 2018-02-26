@@ -42,7 +42,7 @@ extern "C" {
 typedef void (*event_callback_func)(int fd, short event, void *arg);
 
 typedef socket_t* (*create_socket_func)(event_ctx_t *ctx, socket_t* sock, event_callback_func cb);
-typedef void  (*destroy_socket_func)(int fd, short port, int family);
+typedef void  (*destroy_socket_func)(event_ctx_t *ctx, socket_t* sock);
 typedef event_info_t* (*create_event_func)(event_ctx_t *ctx, int type, event_callback_func cb, int timeout);
 typedef void  (*destroy_event_func)(event_ctx_t *ctx, event_info_t *ev);
 
