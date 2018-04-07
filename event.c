@@ -28,6 +28,10 @@
  * @(#)event.c
  */
 
+#ifdef USE_LIBEVENT2
+#include <unistd.h>
+#endif
+
 #include "cice/address.h"
 #include "cice/common.h"
 #include "cice/event.h"
