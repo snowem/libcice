@@ -213,7 +213,7 @@ int
 ice_agent_get_local_credentials ( agent_t *agent, uint32_t stream_id, 
                  char **ufrag, char **pwd);
 
-candidate_t*
+candidate_head_t*
 ice_agent_get_local_candidates ( agent_t *agent, uint32_t stream_id, uint32_t component_id);
 
 int
@@ -222,7 +222,7 @@ ice_agent_set_remote_credentials(agent_t *agent, uint32_t stream_id,
 
 int
 ice_agent_set_remote_candidates(agent_t *agent, uint32_t stream_id, 
-   uint32_t component_id, const candidate_t *candidates);
+   uint32_t component_id, const candidate_head_t *candidates);
 
 void agent_signal_component_state_change(agent_t *agent, 
      uint32_t stream_id, uint32_t component_id, IceComponentState state);
@@ -268,7 +268,7 @@ int
 ice_agent_set_selected_remote_candidate( agent_t *agent, uint32_t stream_id, 
            uint32_t component_id, candidate_t *candidate);
 
-candidate_t*
+candidate_head_t*
 ice_agent_get_remote_candidates(agent_t *agent, uint32_t stream_id, uint32_t component_id);
 
 #ifdef __cplusplus

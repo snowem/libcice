@@ -115,9 +115,9 @@ struct _component
   uint32_t id;                     /* component id */
   IceComponentType type;
   IceComponentState state;
-  candidate_t local_candidates;    /* list of candidate_t objs */
-  candidate_t remote_candidates;   /* list of candidate_t objs */
-  candidate_t *restart_candidate;  /* for storing active remote candidate during a restart */
+  candidate_head_t local_candidates;    /* list of candidate_t objs */
+  candidate_head_t remote_candidates;   /* list of candidate_t objs */
+  candidate_head_t *restart_candidate;  /* for storing active remote candidate during a restart */
   candidate_pair_t selected_pair;  /* independent from checklists, 
                    				        see ICE 11.1. "Sending Media" (ID-19) */
 
