@@ -659,18 +659,17 @@ conn_check_add_for_local_candidate(agent_t *agent,
 static int 
 priv_conn_keepalive_tick_unlocked(agent_t *agent)
 {
-  struct list_head *i, *j;
   int errors = 0;
   int ret = ICE_FALSE;
   size_t buf_len = 0;
+  stream_t *stream = NULL;
 
   //ICE_ERROR("conn keepalive tick, keepalive_conncheck=%u",agent->keepalive_conncheck);
   // case 1: session established and media flowing
   //         (ref ICE sect 10 "Keepalives" ID-19) 
-  list_for_each(i,&agent->streams.list) {
-    stream_t *stream = list_entry(i,stream_t,list);
-    list_for_each(j,&stream->components.list) {
-      component_t *component = list_entry(j,component_t,list);
+  TAILQ_FOREACH(stream,&agent->streams,list) {
+    component_t *component = NULL;
+    TAILQ_FOREACH(component,&stream->components,list) {
       if (component->selected_pair.local != NULL) {
 	     candidate_pair_t *p = &component->selected_pair;
 
@@ -762,10 +761,9 @@ priv_conn_keepalive_tick_unlocked(agent_t *agent)
 
   // case 2: connectivity establishment ongoing
   //         (ref ICE sect 4.1.1.4 "Keeping Candidates Alive" ID-19)
-  list_for_each(i,&agent->streams.list) {
-    stream_t *stream = list_entry(i,stream_t,list);
-    list_for_each(j,&stream->components.list) {
-      component_t *component = list_entry(j,component_t,list);
+  TAILQ_FOREACH(stream,&agent->streams,list) {
+    component_t *component = NULL;
+    TAILQ_FOREACH(component,&stream->components,list) {
       if (component->state < ICE_COMPONENT_STATE_READY &&
           agent->stun_server_ip) {
         address_t stun_server;
@@ -1199,10 +1197,10 @@ prune_cancelled_conn_check(candidate_check_pair_t *conncheck_list)
 void 
 conn_check_remote_candidates_set(agent_t *agent)
 {
-   struct list_head *i, *j, *k;
+   struct list_head *j, *k;
+   stream_t *stream = NULL;
 
-   list_for_each(i,&agent->streams.list) {
-      stream_t *stream = list_entry(i,stream_t,list);
+   TAILQ_FOREACH(stream,&agent->streams,list) {
       ICE_DEBUG("conncheck list, size=%u",list_size(&stream->connchecks.list));
       list_for_each(j,&stream->connchecks.list) {
          candidate_check_pair_t *pair = list_entry(j,candidate_check_pair_t,list);
@@ -1350,7 +1348,8 @@ static int
 priv_conn_check_unfreeze_next(agent_t *agent)
 {
   candidate_check_pair_t *pair = NULL;
-  struct list_head *i, *j;
+  struct list_head *j;
+  stream_t *stream = NULL;
 
   /* XXX: the unfreezing is implemented a bit differently than in the
    *      current ICE spec, but should still be interoperate:
@@ -1358,8 +1357,7 @@ priv_conn_check_unfreeze_next(agent_t *agent)
    *   - one frozen check is unfrozen (lowest component-id, highest
    *     priority)
    */
-  list_for_each(i,&agent->streams.list) {
-    stream_t *stream = list_entry(i,stream_t,list);
+  TAILQ_FOREACH(stream,&agent->streams,list) {
     uint64_t max_frozen_priority = 0;
 
     list_for_each(j,&stream->connchecks.list) {
@@ -1627,10 +1625,9 @@ priv_conn_check_tick_stream(stream_t *stream, agent_t *agent, struct timeval *no
   if (s_nominated < stream->n_components && s_waiting_for_nomination) {
     keep_timer_going = ICE_TRUE;
     if (agent->controlling_mode) {
-      struct list_head *component_item;
+      component_t *component = NULL;
 
-      list_for_each(component_item,&stream->components.list) {
-        component_t *component = list_entry(component_item,component_t,list);
+      TAILQ_FOREACH(component,&stream->components,list) {
         struct list_head *k;
         list_for_each(k,&stream->connchecks.list) {
            candidate_check_pair_t *p = list_entry(k,candidate_check_pair_t,list);
@@ -1675,6 +1672,7 @@ static void
 priv_update_check_list_failed_components(agent_t *agent, stream_t *stream)
 {
    struct list_head *i;
+   candidate_discovery_t *d = NULL;
    uint32_t c, components = stream->n_components;
 
    ICE_DEBUG("priv_update_check_list_failed_components");
@@ -1685,15 +1683,16 @@ priv_update_check_list_failed_components(agent_t *agent, stream_t *stream)
    if ( agent == NULL || stream == NULL ) 
       return;
    components = stream->n_components;
-   list_for_each(i,&agent->discovery_list.list) {
-      candidate_discovery_t *d = list_entry(i,candidate_discovery_t,list);
+   //list_for_each(i,&agent->discovery_list.list) {
+   //   candidate_discovery_t *d = list_entry(i,candidate_discovery_t,list);
+   TAILQ_FOREACH(d,&agent->discovery_list,list) {
       /* There is still discovery ogoing for this stream,
        * so don't fail any of it's candidates. */
       if (d->stream == stream && !d->done)
          return;
    }
 
-   if (!list_empty(&agent->discovery_list.list)) {
+   if (!TAILQ_EMPTY(&agent->discovery_list)) {
       ICE_DEBUG("discovery list not empty");
       return;
    }
@@ -1747,15 +1746,14 @@ priv_conn_check_tick_unlocked(agent_t *agent)
 {
   candidate_check_pair_t *pair = NULL;
   int keep_timer_going = ICE_FALSE;
-  struct list_head *i, *j;
   struct timeval now;
+  stream_t *stream = NULL;
 
   /* step: process ongoing STUN transactions */
   gettimeofday(&now,NULL);
 
   /* step: find the highest priority waiting check and send it */
-  list_for_each(i,&agent->streams.list) {
-    stream_t *stream = list_entry(i,stream_t,list);
+  TAILQ_FOREACH(stream,&agent->streams,list) {
 
     pair = priv_conn_check_find_next_waiting(&stream->connchecks);
     if (pair)
@@ -1769,8 +1767,7 @@ priv_conn_check_tick_unlocked(agent_t *agent)
     keep_timer_going = priv_conn_check_unfreeze_next(agent);
   }
 
-  list_for_each(j,&agent->streams.list) {
-    stream_t *stream = list_entry(j,stream_t,list);
+  TAILQ_FOREACH(stream,&agent->streams,list) {
     int res = priv_conn_check_tick_stream(stream, agent, &now);
     if (res == ICE_TRUE)
       keep_timer_going = ICE_TRUE;
@@ -1779,12 +1776,12 @@ priv_conn_check_tick_unlocked(agent_t *agent)
   //ICE_DEBUG("keep timer going, value=%u",keep_timer_going);
   /* step: stop timer if no work left */
   if (keep_timer_going != ICE_TRUE) {
+    stream_t *stream = NULL;
     ICE_DEBUG("Agent %p: stopping conncheck timer", agent);
-    list_for_each(i,&agent->streams.list) {
-      stream_t *stream = list_entry(i,stream_t,list);
+    TAILQ_FOREACH(stream,&agent->streams,list) {
+      component_t *component = NULL;
       priv_update_check_list_failed_components(agent, stream);
-      list_for_each(j,&stream->components.list) {
-        component_t *component = list_entry(j,component_t,list);
+      TAILQ_FOREACH(component,&stream->components,list) {
         priv_update_check_list_state_for_ready(agent, stream, component);
       }
     }
@@ -1959,10 +1956,10 @@ conncheck_stun_validater(StunAgent *agent,
  */
 static void priv_recalculate_pair_priorities(agent_t *agent)
 {
-  struct list_head *i,*j;
+  struct list_head *j;
+  stream_t *stream = NULL;
 
-  list_for_each(i,&agent->streams.list) {
-    stream_t *stream = list_entry(i,stream_t,list);
+  TAILQ_FOREACH(stream,&agent->streams,list) {
     list_for_each(j,&stream->connchecks.list) {
       candidate_check_pair_t *p = list_entry(j,candidate_check_pair_t,list);
       p->priority = agent_candidate_pair_priority(agent, p->local, p->remote);
@@ -2119,8 +2116,10 @@ static void priv_conn_check_unfreeze_related (agent_t *agent, stream_t *stream, 
   stream = agent_find_stream(agent, ok_check->stream_id);
   if (stream_all_components_ready(stream) == ICE_OK) {
     /* step: unfreeze checks from other streams */
-    list_for_each(i,&agent->streams.list) {
-      stream_t *s = list_entry(i,stream_t,list);
+    stream_t *s = NULL;
+    //list_for_each(i,&agent->streams.list) {
+    //  stream_t *s = list_entry(i,stream_t,list);
+    TAILQ_FOREACH(s,&agent->streams,list) {
       list_for_each(j,&stream->connchecks.list) {
 	      candidate_check_pair_t *p = list_entry(j,candidate_check_pair_t,list);
 
@@ -2455,15 +2454,14 @@ priv_map_reply_to_discovery_request(agent_t *agent, StunMessage *resp)
   } alternate;
   socklen_t alternatelen = sizeof (sockaddr);
 
-  struct list_head *i;
+  candidate_discovery_t *d = NULL;
   StunUsageBindReturn res;
   int trans_found = ICE_FALSE;
   StunTransactionId discovery_id;
   StunTransactionId response_id;
   stun_message_id (resp, response_id);
 
-  list_for_each(i,&agent->discovery_list.list ) {
-    candidate_discovery_t *d = list_entry(i,candidate_discovery_t,list);
+  TAILQ_FOREACH(d,&agent->discovery_list,list ) {
 
     if (d->type == ICE_CANDIDATE_TYPE_SERVER_REFLEXIVE &&
         d->stun_message.buffer) {
@@ -2603,8 +2601,10 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
    /* Check for discovery candidates stun agents */
    if (valid == STUN_VALIDATION_BAD_REQUEST ||
        valid == STUN_VALIDATION_UNMATCHED_RESPONSE) {
-      list_for_each(i,&agent->discovery_list.list) {
-         candidate_discovery_t *d = list_entry(i,candidate_discovery_t,list);
+      candidate_discovery_t *d = NULL;
+      //list_for_each(i,&agent->discovery_list.list) {
+      //   candidate_discovery_t *d = list_entry(i,candidate_discovery_t,list);
+      TAILQ_FOREACH(d,&agent->discovery_list,list) {
          if (d->stream == stream && d->component == component &&
              d->nicesock == nicesock) {
             valid = stun_agent_validate (&d->stun_agent, &req,
@@ -2937,8 +2937,8 @@ conn_check_stop(agent_t *agent)
 
 void conn_check_prune_stream(agent_t *agent, stream_t *stream)
 {
-  struct list_head *i;
   int keep_going = 0;
+  stream_t *s = NULL;
 
   ICE_DEBUG("FIXME: freeing conncheck_list of stream, agent=%p,stream=%p", agent, stream);
   if (!list_empty(&stream->connchecks.list)) {
@@ -2947,8 +2947,7 @@ void conn_check_prune_stream(agent_t *agent, stream_t *stream)
     INIT_LIST_HEAD(&stream->connchecks.list);
   }
 
-  list_for_each(i,&agent->streams.list) {
-    stream_t *s = list_entry(i,stream_t,list);
+  TAILQ_FOREACH(s,&agent->streams,list) {
     if ( !list_empty(&s->connchecks.list) ) {
       keep_going = 1;
       break;

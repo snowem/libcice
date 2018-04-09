@@ -64,7 +64,6 @@ typedef enum {
 
 struct _candidate_discovery
 {
-  struct list_head list;
   agent_t *agent;         /* back pointer to owner */
   IceCandidateType type;   /* candidate type STUN or TURN */
   socket_t *nicesock;     /* XXX: should be taken from local cand: existing socket to use */
@@ -81,7 +80,10 @@ struct _candidate_discovery
   uint8_t stun_resp_buffer[STUN_MAX_MESSAGE_SIZE];
   StunMessage stun_resp_msg;
 //  TurnServer *turn;
+  
+  TAILQ_ENTRY(_candidate_discovery) list;
 };
+typedef TAILQ_HEAD(candidate_discovery_head, _candidate_discovery) candidate_discovery_head_t;
 
 struct _candidate_refresh
 {

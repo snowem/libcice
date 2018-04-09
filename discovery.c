@@ -142,17 +142,16 @@ void priv_generate_candidate_credentials (agent_t *agent,
  */
 static void priv_assign_foundation (agent_t *agent, candidate_t *candidate)
 {
-   struct list_head *spos, *cpos;
+   stream_t *stream = NULL;
 
    if ( agent == NULL || candidate == NULL )
       return;
 
    ICE_DEBUG("priv_assign_foundation");
 
-   list_for_each(spos,&agent->streams.list) {
-      stream_t *stream = list_entry(spos,stream_t,list);
-      list_for_each(cpos,&stream->components.list) {
-         component_t *component = list_entry(cpos,component_t,list);
+   TAILQ_FOREACH(stream,&agent->streams,list) {
+      component_t *component = NULL;
+      TAILQ_FOREACH(component,&stream->components,list) {
          candidate_t *n = NULL;
          TAILQ_FOREACH(n,&component->local_candidates,list) {
             assert( candidate != n );
@@ -354,21 +353,18 @@ static uint32_t priv_highest_remote_foundation (component_t *component)
 
 static void priv_assign_remote_foundation (agent_t *agent, candidate_t *candidate)
 {
-  struct list_head *i, *j;
   uint32_t next_remote_id;
   component_t *component = NULL;
+  stream_t *stream = NULL;
 
-  list_for_each(i,&agent->streams.list) {
-    stream_t *stream = list_entry(i,stream_t,list);
-    list_for_each(j,&stream->components.list) {
-      component_t *c = list_entry(j,component_t,list);
+  TAILQ_FOREACH(stream,&agent->streams,list) {
+    component_t *c = NULL;
+    TAILQ_FOREACH(c,&stream->components,list) {
       candidate_t *n = NULL;
 
       if (c->id == candidate->component_id)
         component = c;
 
-      //list_for_each(k,&c->remote_candidates.list) {
-      //  candidate_t *n = list_entry(k,candidate_t,list);
       TAILQ_FOREACH(n,&c->remote_candidates,list) {
 
         /* note: candidate must not on the remote candidate list */
@@ -737,10 +733,9 @@ discovery_discover_tcp_server_reflexive_candidates (
  */
 void discovery_prune_stream(agent_t *agent, uint32_t stream_id)
 {
-  struct list_head *i;
+  candidate_discovery_t *cand = NULL;
 
-  list_for_each(i,&agent->discovery_list.list) {
-    candidate_discovery_t *cand = list_entry(i,candidate_discovery_t,list);
+  TAILQ_FOREACH(cand,&agent->discovery_list,list) {
     if (cand->stream->id == stream_id) {
        ICE_DEBUG("FIXME: free discovery list");
       //agent->discovery_list = g_slist_remove (agent->discovery_list, cand);
@@ -784,14 +779,13 @@ discovery_free_item(candidate_discovery_t *cand)
 void
 discovery_free(agent_t *agent) 
 {
-  struct list_head *i, *n;
+  candidate_discovery_t *cand = NULL;
 
-  list_for_each_safe(i,n,&agent->discovery_list.list) {
-    candidate_discovery_t *cand = list_entry(i,candidate_discovery_t,list);
-    list_del(&cand->list);
+  while (!TAILQ_EMPTY(&agent->discovery_list)) {
+    cand = TAILQ_FIRST(&agent->discovery_list);
+    TAILQ_REMOVE(&agent->discovery_list, cand, list);
     discovery_free_item (cand);
   }
-
 
    return;
 }
