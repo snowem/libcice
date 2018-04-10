@@ -71,8 +71,8 @@ component_new (agent_t *agent, stream_t *stream, uint32_t id)
   component->tcp = 0;
   component->agent = agent;
   component->stream = stream;
-  TAILQ_INIT(&component->local_candidates);
-  TAILQ_INIT(&component->remote_candidates);
+  INIT_LIST_HEAD(&component->local_candidates.list);
+  INIT_LIST_HEAD(&component->remote_candidates.list);
   INIT_LIST_HEAD(&component->incoming_checks.list);
 
   ice_agent_init_stun_agent(agent, &component->stun_agent);
@@ -108,9 +108,10 @@ candidate_t *
 component_find_remote_candidate(const component_t *component, 
   const address_t *addr, IceCandidateTransport transport)
 {
-   candidate_t *candidate = NULL;
+   struct list_head *pos;
 
-   TAILQ_FOREACH(candidate,&component->remote_candidates,list) {
+   list_for_each(pos,&component->remote_candidates.list) {
+      candidate_t *candidate = list_entry(pos,candidate_t,list);
       if ( address_equal(&candidate->addr,addr) &&
            candidate->transport == transport ) {
          return candidate;
@@ -177,17 +178,19 @@ component_find_pair(component_t *cmp, agent_t *agent, const char *lfoundation,
    const char *rfoundation, candidate_pair_t *pair)
 {
 
-  candidate_t *candidate = NULL;
+  struct list_head *i;
   candidate_pair_t result = { 0, };
 
-  TAILQ_FOREACH(candidate,&cmp->local_candidates,list) {
+  list_for_each(i,&cmp->local_candidates.list) {
+    candidate_t *candidate = list_entry(i,candidate_t,list);
     if (strncmp(candidate->foundation, lfoundation, ICE_CANDIDATE_MAX_FOUNDATION) == 0) {
       result.local = candidate;
       break;
     }
   }
 
-  TAILQ_FOREACH(candidate,&cmp->remote_candidates,list) {
+  list_for_each(i,&cmp->remote_candidates.list) {
+    candidate_t *candidate = list_entry(i,candidate_t,list);
     if (strncmp (candidate->foundation, rfoundation, ICE_CANDIDATE_MAX_FOUNDATION) == 0) {
       result.remote = candidate;
       break;
@@ -211,13 +214,14 @@ component_set_selected_remote_candidate(agent_t *agent,
 {
   candidate_t *local = NULL;
   candidate_t *remote = NULL;
-  candidate_t *tmp = NULL;
   uint64_t priority = 0;
+  struct list_head *item = NULL;
 
   if (candidate == NULL)
      return NULL;
 
-  TAILQ_FOREACH(tmp,&component->local_candidates,list) {
+  list_for_each(item,&component->local_candidates.list) {
+    candidate_t *tmp = list_entry(item,candidate_t,list);
     uint64_t tmp_prio = 0;
 
     if (tmp->transport != candidate->transport ||
@@ -242,8 +246,8 @@ component_set_selected_remote_candidate(agent_t *agent,
   ICE_DEBUG("got remote, remote=%p",remote);
   if (!remote) {
     remote = candidate_copy(candidate);
-    //list_add(&remote->list,&component->remote_candidates.list);
-    TAILQ_INSERT_HEAD(&component->remote_candidates,remote,list);
+    //component->remote_candidates = g_slist_append (component->remote_candidates, remote);
+    list_add(&remote->list,&component->remote_candidates.list);
     agent_signal_new_remote_candidate(agent, remote);
   }
 
@@ -260,24 +264,23 @@ component_set_selected_remote_candidate(agent_t *agent,
 void
 ice_component_close(component_t *c) {
   agent_t *agent = (agent_t*)c->agent;
-  candidate_t *p = 0;
+  struct list_head *n,*p; 
   socket_t *sock = 0;
 
   c->state = ICE_COMPONENT_STATE_DISCONNECTED;
 
   // free local candidates  
-  while (!TAILQ_EMPTY(&c->local_candidates)) {
-    p = TAILQ_FIRST(&c->local_candidates);
-    TAILQ_REMOVE(&c->local_candidates,p,list);
-    candidate_free(p);
+  list_for_each_safe(n,p,&c->local_candidates.list) {
+    candidate_t *c = list_entry(n,candidate_t,list);
+    list_del(&c->list);
+    candidate_free(c);
   }
 
-  while (!TAILQ_EMPTY(&c->remote_candidates)) {
-    p = TAILQ_FIRST(&c->remote_candidates);
-    TAILQ_REMOVE(&c->remote_candidates,p,list);
-    candidate_free(p);
+  list_for_each_safe(n,p,&c->remote_candidates.list) {
+    candidate_t *c = list_entry(n,candidate_t,list);
+    list_del(&c->list);
+    candidate_free(c);
   }
-
   sock = (socket_t*)c->sock;
   ICE_DEBUG("component close, fd=%d, sid=%u, cid=%u", sock->fd, c->stream->id, c->id);
   sock->agent = 0;

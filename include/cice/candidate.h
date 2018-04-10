@@ -58,7 +58,6 @@ extern "C" {
 #endif
 
 #include "cice/address.h"
-#include "cice/bsd_queue.h"
 #include "cice/types.h"
 
 typedef enum
@@ -104,6 +103,7 @@ struct _turnserver
 
 struct _candidate
 {
+  struct list_head list;
   IceCandidateType type;
   IceCandidateTransport transport;
   address_t addr;
@@ -117,16 +117,11 @@ struct _candidate
   void *sockptr;
 
   turnserver_t *turn;
-  TAILQ_ENTRY(_candidate) list;
 };
-typedef TAILQ_HEAD(_candidate_head, _candidate) candidate_head_t;
 
 
 candidate_t *
 candidate_new(IceCandidateType type);
-
-candidate_head_t *
-candidate_head_new();
 
 void
 candidate_free(candidate_t *candidate);
