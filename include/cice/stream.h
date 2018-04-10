@@ -69,6 +69,8 @@ extern "C" {
 
 struct _stream
 {
+  struct list_head list;
+
   uint32_t id;
   uint32_t n_components;
   uint32_t tos;
@@ -78,7 +80,7 @@ struct _stream
   char remote_ufrag[ICE_STREAM_MAX_UFRAG];
   char remote_password[ICE_STREAM_MAX_PWD];
 
-  component_head_t       components;  /* list of 'Component' structs */
+  component_t            components;  /* list of 'Component' structs */
   candidate_check_pair_t connchecks;  /* list of CandidateCheckPair items */
 
   /* boolean properties */
@@ -86,9 +88,7 @@ struct _stream
   uint8_t gathering;
   uint8_t gathering_started;
   
-  TAILQ_ENTRY(_stream) list;
 };
-typedef TAILQ_HEAD(_stream_head, _stream) stream_head_t;
 
 
 stream_t*

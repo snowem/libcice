@@ -110,6 +110,8 @@ struct _incoming_check
 
 struct _component
 {
+  struct list_head list;
+
   uint32_t id;                     /* component id */
   IceComponentType type;
   IceComponentState state;
@@ -133,10 +135,7 @@ struct _component
   uint16_t max_port;
 
   incoming_check_t incoming_checks; /* list of IncomingCheck objs */
-
-  TAILQ_ENTRY(_component) list;
 };
-typedef TAILQ_HEAD(_component_head, _component) component_head_t;
 
 component_t *
 component_new (agent_t *agent, stream_t *stream, uint32_t id);
