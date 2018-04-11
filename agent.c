@@ -156,7 +156,7 @@ ice_agent_new(event_ctx_t *base, IceCompatibility compat, int control_mode) {
    agent->reliable = 0; 
   
    /* init list of objects */
-   INIT_LIST_HEAD(&agent->local_addresses.list);
+   TAILQ_INIT(&agent->local_addresses);
    INIT_LIST_HEAD(&agent->streams.list);       
    INIT_LIST_HEAD(&agent->discovery_list.list);
    INIT_LIST_HEAD(&agent->refresh_list.list);
@@ -334,12 +334,14 @@ agent_gathering_done (agent_t *agent) {
 int
 ice_agent_gather_candidates (agent_t *agent, uint32_t stream_id) {
    stream_t *stream;
-   address_t local_addresses;
-   struct list_head *head,*pos;
+   address_head_t local_addresses;
+   address_head_t *head = NULL;
+   address_t *addr = NULL;
    uint32_t cid;
+   int get_local_address = 0;
    int ret = ICE_OK;
 
-   INIT_LIST_HEAD(&local_addresses.list);
+   TAILQ_INIT(&local_addresses);
 
    if ( agent == NULL )
       return ICE_NULLPTR;
@@ -359,17 +361,19 @@ ice_agent_gather_candidates (agent_t *agent, uint32_t stream_id) {
         agent, agent->full_mode ? "ICE-FULL" : "ICE-LITE");   
 
    /* If no local addresses in streams, then generates the list */
-   if ( list_empty(&agent->local_addresses.list)) {
+   if (TAILQ_EMPTY(&agent->local_addresses)) {
       ICE_INFO("no local addresses gathered, agent=%p", agent);
-      ice_interfaces_get_local_ips(&local_addresses.list,0);
-      head = &local_addresses.list;
+      ice_interfaces_get_local_ips(&local_addresses,0);
+      head = &local_addresses;
+      get_local_address = 1;
    } else {
-      head = &agent->local_addresses.list;
+      head = &agent->local_addresses;
    }
-  
-   list_for_each(pos,head) {
+
+   while (!TAILQ_EMPTY(head)) {
       candidate_t *host_candidate;
-      address_t *addr = list_entry(pos,address_t,list);
+      addr = TAILQ_FIRST(head);
+      TAILQ_REMOVE(head, addr, list);
 
       print_address(addr);
 
@@ -468,6 +472,8 @@ ice_agent_gather_candidates (agent_t *agent, uint32_t stream_id) {
 
          }
       }
+      if (get_local_address);
+        address_free(addr);
    }
   
    stream->gathering = 1;
@@ -1251,7 +1257,7 @@ ice_agent_add_local_address (agent_t *agent, address_t *addr)
 
   dupaddr = address_dup(addr);
   address_set_port (dupaddr, 0);
-  list_add(&dupaddr->list,&agent->local_addresses.list);
+  TAILQ_INSERT_HEAD(&agent->local_addresses,dupaddr,list);
 
   return ICE_OK;
 }

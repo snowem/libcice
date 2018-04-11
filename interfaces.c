@@ -98,7 +98,7 @@ ice_interfaces_is_private_ip (const struct sockaddr *_sa)
 }
 
 struct list_head*
-ice_interfaces_get_local_ips (struct list_head *head, int include_loopback)
+ice_interfaces_get_local_ips (address_head_t *head, int include_loopback)
 {
   struct ifaddrs *ifa, *results;
 
@@ -150,7 +150,7 @@ ice_interfaces_get_local_ips (struct list_head *head, int include_loopback)
       address_t *addr = address_new();
       if (address_set_from_string(addr, addr_string) == ICE_OK) {
          ICE_DEBUG("add local address, addr=%s",addr_string);
-         list_add(&addr->list,head);
+         TAILQ_INSERT_HEAD(head,addr,list);
       } else {
          ICE_ERROR("failed to parse local address, addr=%s",addr_string);
          address_free(addr);

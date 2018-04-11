@@ -284,7 +284,7 @@ address_t *
 address_dup(const address_t *a) {
    address_t *dup = ICE_MALLOC(address_t);
    *dup = *a;
-   INIT_LIST_HEAD(&dup->list);
+   //INIT_LIST_HEAD(&dup->list);
    return dup;
 }
 
@@ -294,7 +294,7 @@ address_init(address_t *addr) {
       return;
    addr->s.addr.sa_family = AF_UNSPEC;
    memset(&addr->s, 0, sizeof(addr->s));
-   INIT_LIST_HEAD(&addr->list);
+   //INIT_LIST_HEAD(&addr->list);
    return;
 }
 

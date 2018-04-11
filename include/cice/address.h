@@ -53,19 +53,20 @@ extern "C" {
 #include <string.h>
 
 #include "cice/common.h"
-#include "cice/list.h"
+#include "cice/bsd_queue.h"
 #include "cice/types.h"
 
 struct _address
 {
-   struct list_head list;
    union
    {
      struct sockaddr     addr;
      struct sockaddr_in  ip4;
      struct sockaddr_in6 ip6;
    } s;
+   TAILQ_ENTRY(_address) list;
 };
+typedef TAILQ_HEAD(address_head, _address) address_head_t;
 
 #define ICE_ADDRESS_STRING_LEN INET6_ADDRSTRLEN
 
