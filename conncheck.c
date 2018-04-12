@@ -2622,8 +2622,10 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
    /* Check for relay refresh stun agents */
    if (valid == STUN_VALIDATION_BAD_REQUEST ||
        valid == STUN_VALIDATION_UNMATCHED_RESPONSE) {
-      list_for_each(i,&agent->refresh_list.list) {
-         candidate_refresh_t *r = list_entry(i,candidate_refresh_t,list);
+      candidate_refresh_t *r = NULL;
+      //list_for_each(i,&agent->refresh_list.list) {
+      //   candidate_refresh_t *r = list_entry(i,candidate_refresh_t,list);
+      TAILQ_FOREACH(r,&agent->refresh_list,list) {
          ICE_DEBUG("Comparing %p to %p, %p to %p and %p and %p to %p", r->stream, stream, 
                r->component, component, r->nicesock, r->candidate->sockptr, nicesock);
          if (r->stream == stream && r->component == component &&

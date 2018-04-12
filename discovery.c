@@ -757,9 +757,11 @@ void discovery_prune_stream(agent_t *agent, uint32_t stream_id)
 void refresh_prune_stream(agent_t *agent, uint32_t stream_id)
 {
   struct list_head *i;
+  candidate_refresh_t *cand = NULL;
 
-  list_for_each(i,&agent->refresh_list.list) {
-    candidate_refresh_t *cand = list_entry(i,candidate_refresh_t,list);
+  //list_for_each(i,&agent->refresh_list.list) {
+  //  candidate_refresh_t *cand = list_entry(i,candidate_refresh_t,list);
+  TAILQ_FOREACH(cand,&agent->refresh_list,list) {
 
     /* Don't free the candidate refresh to the currently selected local candidate
      * unless the whole pair is being destroyed.
@@ -807,12 +809,18 @@ void
 refresh_free(agent_t *agent) 
 {
   struct list_head *i, *n;
+  candidate_refresh_t *cand = NULL;
 
-  list_for_each_safe(i,n,&agent->refresh_list.list) {
+  /*list_for_each_safe(i,n,&agent->refresh_list.list) {
     candidate_refresh_t *cand = list_entry(i,candidate_refresh_t,list);
     list_del(&cand->list);
     refresh_free_item (cand);
-  }
+  }*/
 
-   return;
+  while (!TAILQ_EMPTY(&agent->refresh_list)) {
+    cand = TAILQ_FIRST(&agent->refresh_list);
+    TAILQ_REMOVE(&agent->refresh_list, cand, list);
+    refresh_free_item (cand);
+  }
+  return;
 }

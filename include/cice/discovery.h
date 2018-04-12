@@ -85,7 +85,6 @@ struct _candidate_discovery
 
 struct _candidate_refresh
 {
-  struct list_head list;
   agent_t *agent;         /* back pointer to owner */
   socket_t *nicesock;     /* existing socket to use */
   address_t server;       /* STUN/TURN server address */
@@ -100,7 +99,11 @@ struct _candidate_refresh
   StunMessage stun_message;
   uint8_t stun_resp_buffer[STUN_MAX_MESSAGE_SIZE];
   StunMessage stun_resp_msg;
+
+  TAILQ_ENTRY(_candidate_refresh) list;
 };
+typedef TAILQ_HEAD(_te_refresh_head, _candidate_refresh) candidate_refresh_head_t;
+
 
 HostCandidateResult 
 discovery_add_local_host_candidate (

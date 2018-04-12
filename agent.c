@@ -159,7 +159,7 @@ ice_agent_new(event_ctx_t *base, IceCompatibility compat, int control_mode) {
    TAILQ_INIT(&agent->local_addresses);
    INIT_LIST_HEAD(&agent->streams.list);       
    INIT_LIST_HEAD(&agent->discovery_list.list);
-   INIT_LIST_HEAD(&agent->refresh_list.list);
+   TAILQ_INIT(&agent->refresh_list);
 
    return agent;
 }
