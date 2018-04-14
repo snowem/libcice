@@ -83,8 +83,9 @@ agent_find_stream(agent_t *agent, uint32_t stream_id)
    if (agent == NULL)
       return NULL;
 
-   list_for_each(pos,&agent->streams.list) {
-      stream = list_entry(pos,stream_t,list);
+   //list_for_each(pos,&agent->streams.list) {
+   //   stream = list_entry(pos,stream_t,list);
+   TAILQ_FOREACH(stream,&agent->streams,list) {
       //ICE_DEBUG("stream search, id=%u,stream_id=%u",
       //      stream->id,stream_id);
       if (stream->id == stream_id )
@@ -157,7 +158,7 @@ ice_agent_new(event_ctx_t *base, IceCompatibility compat, int control_mode) {
   
    /* init list of objects */
    TAILQ_INIT(&agent->local_addresses);
-   INIT_LIST_HEAD(&agent->streams.list);       
+   TAILQ_INIT(&agent->streams);       
    INIT_LIST_HEAD(&agent->discovery_list.list);
    TAILQ_INIT(&agent->refresh_list);
 
@@ -167,15 +168,21 @@ ice_agent_new(event_ctx_t *base, IceCompatibility compat, int control_mode) {
 void
 ice_agent_free(agent_t *agent) {
    struct list_head *n,*p;
+   stream_t *s = NULL;
    
    discovery_free(agent);
    refresh_free(agent);
    conn_check_free(agent);
    
-   list_for_each_safe(n,p,&agent->streams.list) {
+   /*list_for_each_safe(n,p,&agent->streams.list) {
       stream_t *s = list_entry(n,stream_t,list);
       list_del(&s->list);
       ice_stream_close(s);
+   }*/
+   while (!TAILQ_EMPTY(&agent->streams)) {
+     s = TAILQ_FIRST(&agent->streams);
+     TAILQ_REMOVE(&agent->streams, s, list);
+     ice_stream_close(s);
    }
    
    if (agent->keepalive_timer_ev) {
@@ -196,7 +203,8 @@ ice_agent_add_stream(agent_t *agent, uint32_t n_components) {
       ICE_ERROR("failed to create new stream");
       return 0;
    }
-   list_add(&stream->list,&agent->streams.list);
+   //list_add(&stream->list,&agent->streams.list);
+   TAILQ_INSERT_HEAD(&agent->streams,stream,list);
 
    /*. init components of stream, possibly create pseudo_tcp */
    stream->id = agent->next_stream_id++;
@@ -255,13 +263,15 @@ ice_agent_attach_recv (agent_t *agent, uint32_t stream_id, uint32_t component_id
 void agent_signal_gathering_done(agent_t *agent)
 {
    struct list_head *pos;
+   stream_t *stream = NULL;
 
    if (agent == NULL)
       return;
 
-   list_for_each(pos,&agent->streams.list) {
-      stream_t *stream = list_entry(pos,stream_t,list);
-      if ( stream->gathering ) {
+   //list_for_each(pos,&agent->streams.list) {
+   //   stream_t *stream = list_entry(pos,stream_t,list);
+   TAILQ_FOREACH(stream,&agent->streams,list) {
+      if (stream->gathering) {
          stream->gathering = 0;
          if ( agent->candidate_gathering_done_cb ) {
             agent->candidate_gathering_done_cb(agent,
@@ -277,13 +287,15 @@ void agent_signal_gathering_done(agent_t *agent)
 void 
 agent_gathering_done (agent_t *agent) {
    struct list_head *i, *j, *k, *l, *m;
+   stream_t *stream = NULL;
 
    if (agent == NULL)
       return;
 
    ICE_INFO("gathering done");
-   list_for_each(i,&agent->streams.list) {
-      stream_t *stream = list_entry(i,stream_t,list);
+   //list_for_each(i,&agent->streams.list) {
+   //   stream_t *stream = list_entry(i,stream_t,list);
+   TAILQ_FOREACH(stream,&agent->streams,list) {
       list_for_each(j,&stream->components.list) {
          component_t *component = list_entry(j,component_t,list);
          list_for_each(k,&component->local_candidates.list) {
@@ -1377,17 +1389,20 @@ ice_agent_remove_stream(agent_t *agent, uint32_t stream_id)
   refresh_prune_stream(agent, stream_id);
 
   /* Remove the stream and signal its removal. */
-  list_del(&stream->list);
+  //list_del(&stream->list);
+  TAILQ_REMOVE(&agent->streams,stream,list);
   {
      struct list_head *i;
-     list_for_each(i,&agent->streams.list) {
-        stream_t *s = list_entry(i,stream_t,list);
+     stream_t *s = NULL;
+     //list_for_each(i,&agent->streams.list) {
+     //   stream_t *s = list_entry(i,stream_t,list);
+     TAILQ_FOREACH(s,&agent->streams,list) {
         ICE_DEBUG("stream info, sid=%u",s->id);
      }
   }
   ice_stream_close(stream);
 
-  if ( !list_empty(&agent->streams.list) ) {
+  if ( !TAILQ_EMPTY(&agent->streams) ) {
      /* FIXME: priv_remove_keepalive_timer */
      //priv_remove_keepalive_timer (agent);
   }

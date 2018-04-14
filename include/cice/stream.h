@@ -69,8 +69,6 @@ extern "C" {
 
 struct _stream
 {
-  struct list_head list;
-
   uint32_t id;
   uint32_t n_components;
   uint32_t tos;
@@ -88,7 +86,9 @@ struct _stream
   uint8_t gathering;
   uint8_t gathering_started;
   
+  TAILQ_ENTRY(_stream) list;
 };
+typedef TAILQ_HEAD(_stream_head, _stream) stream_head_t;
 
 
 stream_t*

@@ -143,14 +143,16 @@ void priv_generate_candidate_credentials (agent_t *agent,
 static void priv_assign_foundation (agent_t *agent, candidate_t *candidate)
 {
    struct list_head *spos,*cpos,*candpos;
+   stream_t *stream = NULL;
 
    if ( agent == NULL || candidate == NULL )
       return;
 
    ICE_DEBUG("priv_assign_foundation");
 
-   list_for_each(spos,&agent->streams.list) {
-      stream_t *stream = list_entry(spos,stream_t,list);
+   //list_for_each(spos,&agent->streams.list) {
+   //   stream_t *stream = list_entry(spos,stream_t,list);
+   TAILQ_FOREACH(stream,&agent->streams,list) {
       list_for_each(cpos,&stream->components.list) {
          component_t *component = list_entry(cpos,component_t,list);
          list_for_each(candpos,&component->local_candidates.list) {
@@ -359,9 +361,11 @@ static void priv_assign_remote_foundation (agent_t *agent, candidate_t *candidat
   struct list_head *i, *j, *k;
   uint32_t next_remote_id;
   component_t *component = NULL;
+  stream_t *stream = NULL;
 
-  list_for_each(i,&agent->streams.list) {
-    stream_t *stream = list_entry(i,stream_t,list);
+  //list_for_each(i,&agent->streams.list) {
+  //  stream_t *stream = list_entry(i,stream_t,list);
+  TAILQ_FOREACH(stream,&agent->streams,list) {
     list_for_each(j,&stream->components.list) {
       component_t *c = list_entry(j,component_t,list);
 

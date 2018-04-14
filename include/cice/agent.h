@@ -107,7 +107,7 @@ struct _agent
   uint32_t  max_conn_checks;      /* property: max connectivity checks */
 
   address_head_t local_addresses;                    /* list of NiceAddress for local interfaces */
-  stream_t  streams;                            /* list of Stream objects */
+  stream_head_t  streams;                            /* list of Stream objects */
   candidate_discovery_t discovery_list;         /* list of CandidateDiscovery items */
   candidate_refresh_head_t   refresh_list;           /* list of CandidateRefresh items */
 
