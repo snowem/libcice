@@ -153,8 +153,10 @@ static void priv_assign_foundation (agent_t *agent, candidate_t *candidate)
    //list_for_each(spos,&agent->streams.list) {
    //   stream_t *stream = list_entry(spos,stream_t,list);
    TAILQ_FOREACH(stream,&agent->streams,list) {
-      list_for_each(cpos,&stream->components.list) {
-         component_t *component = list_entry(cpos,component_t,list);
+      component_t *component = NULL;
+      //list_for_each(cpos,&stream->components.list) {
+      //   component_t *component = list_entry(cpos,component_t,list);
+      TAILQ_FOREACH(component,&stream->components,list) {
          list_for_each(candpos,&component->local_candidates.list) {
             candidate_t *n = list_entry(candpos,candidate_t,list);
             assert( candidate != n );
@@ -366,8 +368,10 @@ static void priv_assign_remote_foundation (agent_t *agent, candidate_t *candidat
   //list_for_each(i,&agent->streams.list) {
   //  stream_t *stream = list_entry(i,stream_t,list);
   TAILQ_FOREACH(stream,&agent->streams,list) {
-    list_for_each(j,&stream->components.list) {
-      component_t *c = list_entry(j,component_t,list);
+    component_t *c = NULL;
+    //list_for_each(j,&stream->components.list) {
+    //  component_t *c = list_entry(j,component_t,list);
+    TAILQ_FOREACH(c,&stream->components,list) {
 
       if (c->id == candidate->component_id)
         component = c;

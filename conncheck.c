@@ -674,8 +674,10 @@ priv_conn_keepalive_tick_unlocked(agent_t *agent)
   //list_for_each(i,&agent->streams.list) {
   //  stream_t *stream = list_entry(i,stream_t,list);
   TAILQ_FOREACH(stream,&agent->streams,list) {
-    list_for_each(j,&stream->components.list) {
-      component_t *component = list_entry(j,component_t,list);
+    component_t *component = NULL;
+    //list_for_each(j,&stream->components.list) {
+    //  component_t *component = list_entry(j,component_t,list);
+    TAILQ_FOREACH(component,&stream->components,list) {
       if (component->selected_pair.local != NULL) {
 	     candidate_pair_t *p = &component->selected_pair;
 
@@ -770,8 +772,10 @@ priv_conn_keepalive_tick_unlocked(agent_t *agent)
   //list_for_each(i,&agent->streams.list) {
   //  stream_t *stream = list_entry(i,stream_t,list);
   TAILQ_FOREACH(stream,&agent->streams,list) {
-    list_for_each(j,&stream->components.list) {
-      component_t *component = list_entry(j,component_t,list);
+    component_t *component = NULL;
+    //list_for_each(j,&stream->components.list) {
+    //  component_t *component = list_entry(j,component_t,list);
+    TAILQ_FOREACH(component,&stream->components,list) {
       if (component->state < ICE_COMPONENT_STATE_READY &&
           agent->stun_server_ip) {
         address_t stun_server;
@@ -1635,9 +1639,11 @@ priv_conn_check_tick_stream(stream_t *stream, agent_t *agent, struct timeval *no
     keep_timer_going = ICE_TRUE;
     if (agent->controlling_mode) {
       struct list_head *component_item;
+      component_t *component = NULL;
 
-      list_for_each(component_item,&stream->components.list) {
-        component_t *component = list_entry(component_item,component_t,list);
+      //list_for_each(component_item,&stream->components.list) {
+      //  component_t *component = list_entry(component_item,component_t,list);
+      TAILQ_FOREACH(component,&stream->components,list) {
         struct list_head *k;
         list_for_each(k,&stream->connchecks.list) {
            candidate_check_pair_t *p = list_entry(k,candidate_check_pair_t,list);
@@ -1793,9 +1799,11 @@ priv_conn_check_tick_unlocked(agent_t *agent)
     //list_for_each(i,&agent->streams.list) {
     //  stream_t *stream = list_entry(i,stream_t,list);
     TAILQ_FOREACH(stream,&agent->streams,list) {
+      component_t *component = NULL;
       priv_update_check_list_failed_components(agent, stream);
-      list_for_each(j,&stream->components.list) {
-        component_t *component = list_entry(j,component_t,list);
+      //list_for_each(j,&stream->components.list) {
+      //  component_t *component = list_entry(j,component_t,list);
+      TAILQ_FOREACH(component,&stream->components,list) {
         priv_update_check_list_state_for_ready(agent, stream, component);
       }
     }

@@ -78,7 +78,7 @@ struct _stream
   char remote_ufrag[ICE_STREAM_MAX_UFRAG];
   char remote_password[ICE_STREAM_MAX_PWD];
 
-  component_t            components;  /* list of 'Component' structs */
+  component_head_t       components;  /* list of 'Component' structs */
   candidate_check_pair_t connchecks;  /* list of CandidateCheckPair items */
 
   /* boolean properties */

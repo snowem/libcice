@@ -296,8 +296,10 @@ agent_gathering_done (agent_t *agent) {
    //list_for_each(i,&agent->streams.list) {
    //   stream_t *stream = list_entry(i,stream_t,list);
    TAILQ_FOREACH(stream,&agent->streams,list) {
-      list_for_each(j,&stream->components.list) {
-         component_t *component = list_entry(j,component_t,list);
+      component_t *component = NULL;
+      //list_for_each(j,&stream->components.list) {
+      //   component_t *component = list_entry(j,component_t,list);
+      TAILQ_FOREACH(component,&stream->components,list) {
          list_for_each(k,&component->local_candidates.list) {
             candidate_t *local_candidate = list_entry(k,candidate_t,list);
 
