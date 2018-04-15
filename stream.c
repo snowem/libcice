@@ -77,11 +77,10 @@ stream_new (agent_t *agent, uint32_t n_components)
   ICE_DEBUG("create new stream, stream=%p, n_components=%u", stream, n_components);
 
   TAILQ_INIT(&stream->components);
-  INIT_LIST_HEAD(&stream->connchecks.list);
+  TAILQ_INIT(&stream->connchecks);
 
   for (n = 0; n < n_components; n++) {
     component = component_new (agent, stream, n + 1);
-    //list_add(&component->list,&stream->components.list);
     TAILQ_INSERT_HEAD(&stream->components,component,list);
   }
 
@@ -96,13 +95,10 @@ component_t *
 stream_find_component_by_id (const stream_t *stream, uint32_t id)
 {
    component_t *c;
-   struct list_head *pos;
 
    if (stream == NULL )
       return NULL;
 
-   //list_for_each(pos,&stream->components.list) {
-   //   c = list_entry(pos,component_t,list);
    TAILQ_FOREACH(c,&stream->components,list) {
       //ICE_DEBUG("search component, component_id=%u,search_id=%u",c->id,id);
       if ( c->id == id )
@@ -119,11 +115,8 @@ stream_find_component_by_id (const stream_t *stream, uint32_t id)
 int
 stream_all_components_ready(const stream_t *stream)
 {
-  struct list_head *i;
   component_t *component = NULL;
 
-  //list_for_each(i,&stream->components.list) {
-  //  component_t *component = list_entry(i,component_t,list);
   TAILQ_FOREACH(component,&stream->components,list) {
     if ( component &&
 	     !(component->state == ICE_COMPONENT_STATE_CONNECTED ||
@@ -137,14 +130,7 @@ stream_all_components_ready(const stream_t *stream)
 
 void
 ice_stream_close(stream_t *s) {
-  struct list_head *i,*p;
   component_t *c = NULL;
-
-  /*list_for_each_safe(i,p,&s->components.list) {
-    component_t *c = list_entry(i,component_t,list);
-    list_del(&c->list);
-    ice_component_close(c);
-  }*/
 
   while (!TAILQ_EMPTY(&s->components)) {
     c = TAILQ_FIRST(&s->components);

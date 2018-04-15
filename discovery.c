@@ -142,20 +142,14 @@ void priv_generate_candidate_credentials (agent_t *agent,
  */
 static void priv_assign_foundation (agent_t *agent, candidate_t *candidate)
 {
-   struct list_head *spos,*cpos,*candpos;
+   struct list_head *candpos;
    stream_t *stream = NULL;
 
    if ( agent == NULL || candidate == NULL )
       return;
 
-   ICE_DEBUG("priv_assign_foundation");
-
-   //list_for_each(spos,&agent->streams.list) {
-   //   stream_t *stream = list_entry(spos,stream_t,list);
    TAILQ_FOREACH(stream,&agent->streams,list) {
       component_t *component = NULL;
-      //list_for_each(cpos,&stream->components.list) {
-      //   component_t *component = list_entry(cpos,component_t,list);
       TAILQ_FOREACH(component,&stream->components,list) {
          list_for_each(candpos,&component->local_candidates.list) {
             candidate_t *n = list_entry(candpos,candidate_t,list);
@@ -360,17 +354,13 @@ static uint32_t priv_highest_remote_foundation (component_t *component)
 
 static void priv_assign_remote_foundation (agent_t *agent, candidate_t *candidate)
 {
-  struct list_head *i, *j, *k;
+  struct list_head *k;
   uint32_t next_remote_id;
   component_t *component = NULL;
   stream_t *stream = NULL;
 
-  //list_for_each(i,&agent->streams.list) {
-  //  stream_t *stream = list_entry(i,stream_t,list);
   TAILQ_FOREACH(stream,&agent->streams,list) {
     component_t *c = NULL;
-    //list_for_each(j,&stream->components.list) {
-    //  component_t *c = list_entry(j,component_t,list);
     TAILQ_FOREACH(c,&stream->components,list) {
 
       if (c->id == candidate->component_id)
@@ -764,13 +754,9 @@ void discovery_prune_stream(agent_t *agent, uint32_t stream_id)
 
 void refresh_prune_stream(agent_t *agent, uint32_t stream_id)
 {
-  struct list_head *i;
   candidate_refresh_t *cand = NULL;
 
-  //list_for_each(i,&agent->refresh_list.list) {
-  //  candidate_refresh_t *cand = list_entry(i,candidate_refresh_t,list);
   TAILQ_FOREACH(cand,&agent->refresh_list,list) {
-
     /* Don't free the candidate refresh to the currently selected local candidate
      * unless the whole pair is being destroyed.
      */
@@ -816,14 +802,7 @@ refresh_free_item(candidate_refresh_t *cand)
 void
 refresh_free(agent_t *agent) 
 {
-  struct list_head *i, *n;
   candidate_refresh_t *cand = NULL;
-
-  /*list_for_each_safe(i,n,&agent->refresh_list.list) {
-    candidate_refresh_t *cand = list_entry(i,candidate_refresh_t,list);
-    list_del(&cand->list);
-    refresh_free_item (cand);
-  }*/
 
   while (!TAILQ_EMPTY(&agent->refresh_list)) {
     cand = TAILQ_FIRST(&agent->refresh_list);

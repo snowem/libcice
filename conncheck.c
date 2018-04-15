@@ -383,32 +383,13 @@ size_t priv_create_username(agent_t *agent, stream_t *stream,
   return 0;
 }
 
-
-/*
- * Compares two connectivity check items. Checkpairs are sorted
- * in descending priority order, with highest priority item at
- * the start of the list.
- */
-int 
-conn_check_compare (void * priv, struct list_head *ha, struct list_head *hb)
-{
-   candidate_check_pair_t *a, *b;
-   a = list_entry(ha,candidate_check_pair_t,list);
-   b = list_entry(hb,candidate_check_pair_t,list);
-
-   if (a->priority > b->priority)
-      return -1;
-   else if (a->priority < b->priority)
-      return 1;
-   return 0;
-}
-
 void
-print_list(candidate_check_pair_t *pair) {
-   struct list_head *pos;
-   ICE_DEBUG("list info");
-   list_for_each(pos,&pair->list) {
-      candidate_check_pair_t *p = list_entry(pos,candidate_check_pair_t,list);
+print_list(candidate_check_pair_head_t *head) {
+   candidate_check_pair_t *p = NULL;
+
+   if (!head) return;
+
+   TAILQ_FOREACH(p,head,list) {
       ICE_ERROR("pair info, priority=%lu,foundation=%s:%s (%p)",
             p->priority,p->local->foundation,p->remote->foundation, p->remote);
    }
@@ -421,14 +402,13 @@ print_list(candidate_check_pair_t *pair) {
  * conn_check_add_for_candidate().
  */
 static void
-priv_limit_conn_check_list_size(candidate_check_pair_t *conncheck_list, uint32_t upper_limit)
+priv_limit_conn_check_list_size(candidate_check_pair_head_t *conncheck_list, uint32_t upper_limit)
 {
   uint32_t valid = 0;
   uint32_t cancelled = 0;
-  struct list_head *pos;
+  candidate_check_pair_t *pair = NULL;
 
-  list_for_each(pos,&conncheck_list->list) {
-     candidate_check_pair_t *pair = list_entry(pos,candidate_check_pair_t,list);
+  TAILQ_FOREACH(pair,conncheck_list,list) {
      if (pair->state != ICE_CHECK_CANCELLED) {
         valid++;
         if (valid > upper_limit) {
@@ -446,6 +426,27 @@ priv_limit_conn_check_list_size(candidate_check_pair_t *conncheck_list, uint32_t
   return;
 }
 
+static void
+conn_check_insert(candidate_check_pair_head_t *head, candidate_check_pair_t *pair) {
+  candidate_check_pair_t *a = NULL;
+
+  if (!head || !pair)
+    return;
+
+  if (TAILQ_EMPTY(head)) {
+    TAILQ_INSERT_HEAD(head,pair,list);
+    return;
+  }
+
+  TAILQ_FOREACH(a,head,list) {
+    if (a->priority > pair->priority) {
+      TAILQ_INSERT_BEFORE(a,pair,list);
+      break;
+    }
+  }
+
+  return;
+}
 
 /*
  * Creates a new connectivity check pair and adds it to
@@ -487,9 +488,10 @@ static void priv_add_new_check_pair (agent_t *agent, uint32_t stream_id, compone
   
   ICE_DEBUG("creating new pair, pair=%p, prio=%lu, rfoundation=%s(%p), state=%d", 
             pair, pair->priority, remote->foundation,remote, initial_state);
-  list_add(&pair->list,&stream->connchecks.list);
-  list_sort(NULL,&stream->connchecks.list,conn_check_compare); 
-  ICE_DEBUG("conncheck info, size=%u", list_size(&stream->connchecks.list));
+
+  conn_check_insert(&stream->connchecks,pair);
+
+  //ICE_DEBUG("conncheck info, size=%u", list_size(&stream->connchecks.list));
   //XXX: modify connchecks list inside list_for_each? check function 'conn_check_remote_candidates_set'
   
   ICE_DEBUG("added a new conncheck, agent=%p, pair=%p, foundation=%s, nominated=%u, stream_id=%u", 
@@ -662,7 +664,7 @@ conn_check_add_for_local_candidate(agent_t *agent,
 static int 
 priv_conn_keepalive_tick_unlocked(agent_t *agent)
 {
-  struct list_head *i, *j, *k;
+  struct list_head *k;
   int errors = 0;
   int ret = ICE_FALSE;
   size_t buf_len = 0;
@@ -671,12 +673,8 @@ priv_conn_keepalive_tick_unlocked(agent_t *agent)
   //ICE_ERROR("conn keepalive tick, keepalive_conncheck=%u",agent->keepalive_conncheck);
   // case 1: session established and media flowing
   //         (ref ICE sect 10 "Keepalives" ID-19) 
-  //list_for_each(i,&agent->streams.list) {
-  //  stream_t *stream = list_entry(i,stream_t,list);
   TAILQ_FOREACH(stream,&agent->streams,list) {
     component_t *component = NULL;
-    //list_for_each(j,&stream->components.list) {
-    //  component_t *component = list_entry(j,component_t,list);
     TAILQ_FOREACH(component,&stream->components,list) {
       if (component->selected_pair.local != NULL) {
 	     candidate_pair_t *p = &component->selected_pair;
@@ -769,12 +767,8 @@ priv_conn_keepalive_tick_unlocked(agent_t *agent)
 
   // case 2: connectivity establishment ongoing
   //         (ref ICE sect 4.1.1.4 "Keeping Candidates Alive" ID-19)
-  //list_for_each(i,&agent->streams.list) {
-  //  stream_t *stream = list_entry(i,stream_t,list);
   TAILQ_FOREACH(stream,&agent->streams,list) {
     component_t *component = NULL;
-    //list_for_each(j,&stream->components.list) {
-    //  component_t *component = list_entry(j,component_t,list);
     TAILQ_FOREACH(component,&stream->components,list) {
       if (component->state < ICE_COMPONENT_STATE_READY &&
           agent->stun_server_ip) {
@@ -866,14 +860,13 @@ priv_update_selected_pair(agent_t *agent, component_t *component, candidate_chec
 static uint32_t 
 priv_prune_pending_checks(stream_t *stream, uint32_t component_id)
 {
-  struct list_head *i;
   uint64_t highest_nominated_priority = 0; 
   uint32_t in_progress = 0; 
+  candidate_check_pair_t *p = NULL;
 
   ICE_DEBUG("Agent XXX: Finding highest priority, component=%d", component_id);
 
-  list_for_each(i,&stream->connchecks.list) {
-    candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
+  TAILQ_FOREACH(p,&stream->connchecks,list) {
     if ( p->component_id == component_id && p->nominated == ICE_TRUE &&
          (p->state == ICE_CHECK_SUCCEEDED || p->state == ICE_CHECK_DISCOVERED) ){
       ICE_DEBUG("verify priority, priority=%llu", p->priority);
@@ -886,8 +879,9 @@ priv_prune_pending_checks(stream_t *stream, uint32_t component_id)
   ICE_DEBUG("Agent XXX: Pruning pending checks, highest_nominated_priority=%lu", highest_nominated_priority);
 
   /* step: cancel all FROZEN and WAITING pairs for the component */
-  list_for_each(i,&stream->connchecks.list) {
-    candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
+  //list_for_each(i,&stream->connchecks.list) {
+  //  candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
+  TAILQ_FOREACH(p,&stream->connchecks,list) {
     if (p->component_id == component_id) {
       if (p->state == ICE_CHECK_FROZEN || p->state == ICE_CHECK_WAITING) {
          p->state = ICE_CHECK_CANCELLED;
@@ -932,15 +926,14 @@ priv_prune_pending_checks(stream_t *stream, uint32_t component_id)
 static void 
 priv_update_check_list_state_for_ready(agent_t *agent, stream_t *stream, component_t *component)
 {
-   struct list_head *i;
+   candidate_check_pair_t *p = NULL;
    int succeeded = 0, nominated = 0;
 
 
    if ( component == NULL )
       return;
    // step: search for at least one nominated pair
-   list_for_each(i,&stream->connchecks.list) {
-      candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
+   TAILQ_FOREACH(p,&stream->connchecks,list) {
       ICE_DEBUG("update check list, pair=%p, nominated=%u, state=%u, p-cid=%u, cid=%u, prio=%llu", 
              p, p->nominated, p->state, p->component_id, component->id, p->priority);
       if (p->component_id == component->id) {
@@ -980,14 +973,13 @@ static void
 priv_mark_pair_nominated(agent_t *agent, stream_t *stream, 
   component_t *component, candidate_t *remotecand)
 {
-   struct list_head *pos;
+   candidate_check_pair_t *pair = NULL;
 
    if (agent == NULL || stream == NULL || component == NULL )
       return;
    
    /* step: search for at least one nominated pair */
-   list_for_each(pos,&stream->connchecks.list) {
-      candidate_check_pair_t *pair = list_entry(pos,candidate_check_pair_t,list);
+   TAILQ_FOREACH(pair,&stream->connchecks,list) {
       /* XXX: hmm, how to figure out to which local candidate the 
        *      check was sent to? let's mark all matching pairs
        *      as nominated instead */
@@ -1022,17 +1014,19 @@ static int
 priv_schedule_triggered_check(agent_t *agent, stream_t *stream, component_t *component, 
     socket_t *local_socket, candidate_t *remote_cand, int use_candidate)
 {
+  candidate_check_pair_t *p = NULL;
   struct list_head *i;
   candidate_t *local = NULL;
 
   if ( remote_cand == NULL )
      return ICE_ERR;
 
-  ICE_DEBUG("trigger check, use_candidate=%u, conncheck_list=%u",
-            use_candidate, list_size(&stream->connchecks.list));
+  //ICE_DEBUG("trigger check, use_candidate=%u, conncheck_list=%u",
+  //          use_candidate, list_size(&stream->connchecks.list));
 
-  list_for_each(i,&stream->connchecks.list) {
-      candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
+  //list_for_each(i,&stream->connchecks.list) {
+  //    candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
+  TAILQ_FOREACH(p,&stream->connchecks,list) {
       if (p->component_id == component->id && 
           p->remote == remote_cand &&
           ((p->local->transport == ICE_CANDIDATE_TRANSPORT_TCP_PASSIVE &&
@@ -1178,16 +1172,16 @@ static void conn_check_free_item (candidate_check_pair_t *pair)
 
 
 static int
-prune_cancelled_conn_check(candidate_check_pair_t *conncheck_list)
+prune_cancelled_conn_check(candidate_check_pair_head_t *conncheck_list)
 {
-   struct list_head *pos,*n;
-   ICE_DEBUG("FIXME: prune_cancelled_conn_check");
-   
-   list_for_each_safe(pos,n,&conncheck_list->list) {
-      candidate_check_pair_t *pair = list_entry(pos,candidate_check_pair_t,list);
+   candidate_check_pair_t *pair = NULL;
+
+continue_cancel:
+   TAILQ_FOREACH(pair,conncheck_list,list) {
       if (pair->state == ICE_CHECK_CANCELLED) {
-         list_del(pos);
+         TAILQ_REMOVE(conncheck_list,pair,list);
          conn_check_free_item(pair);
+         goto continue_cancel;
       }
    }
 
@@ -1206,15 +1200,12 @@ prune_cancelled_conn_check(candidate_check_pair_t *conncheck_list)
 void 
 conn_check_remote_candidates_set(agent_t *agent)
 {
-   struct list_head *i, *j, *k, *l, *m, *n;
+   struct list_head *k, *l, *m, *n;
    stream_t *stream = NULL;
 
-   //list_for_each(i,&agent->streams.list) {
-   //   stream_t *stream = list_entry(i,stream_t,list);
    TAILQ_FOREACH(stream,&agent->streams,list) {
-      ICE_DEBUG("conncheck list, size=%u",list_size(&stream->connchecks.list));
-      list_for_each(j,&stream->connchecks.list) {
-         candidate_check_pair_t *pair = list_entry(j,candidate_check_pair_t,list);
+      candidate_check_pair_t *pair = NULL;
+      TAILQ_FOREACH(pair,&stream->connchecks,list) {
          component_t *component = stream_find_component_by_id(stream, pair->component_id);
          int match = 0;
 
@@ -1359,7 +1350,6 @@ static int
 priv_conn_check_unfreeze_next(agent_t *agent)
 {
   candidate_check_pair_t *pair = NULL;
-  struct list_head *i, *j;
   stream_t *stream = NULL;
 
   /* XXX: the unfreezing is implemented a bit differently than in the
@@ -1368,13 +1358,11 @@ priv_conn_check_unfreeze_next(agent_t *agent)
    *   - one frozen check is unfrozen (lowest component-id, highest
    *     priority)
    */
-  //list_for_each(i,&agent->streams.list) {
-  //  stream_t *stream = list_entry(i,stream_t,list);
   TAILQ_FOREACH(stream,&agent->streams,list) {
     uint64_t max_frozen_priority = 0;
+    candidate_check_pair_t *p = NULL;
 
-    list_for_each(j,&stream->connchecks.list) {
-      candidate_check_pair_t *p = list_entry(j,candidate_check_pair_t,list);
+    TAILQ_FOREACH(p,&stream->connchecks,list) {
       /* XXX: the prio check could be removed as the pairs are sorted
        *       already */
       //ICE_DEBUG("pair info, state=%u,priority=%u",p->state,p->priority);
@@ -1406,14 +1394,13 @@ priv_conn_check_unfreeze_next(agent_t *agent)
  * Finds the next connectivity check in WAITING state.
  */
 static candidate_check_pair_t*
-priv_conn_check_find_next_waiting(candidate_check_pair_t *conn_check_list)
+priv_conn_check_find_next_waiting(candidate_check_pair_head_t *conn_check_list)
 {
-  struct list_head *pos;
+  candidate_check_pair_t *p = NULL;
 
   /* note: list is sorted in priority order to first waiting check has
    *       the highest priority */
-  list_for_each(pos,&conn_check_list->list) {
-    candidate_check_pair_t *p = list_entry(pos,candidate_check_pair_t,list);
+  TAILQ_FOREACH(p,conn_check_list,list) {
     if (p->state == ICE_CHECK_WAITING)
       return p;
   }
@@ -1478,13 +1465,11 @@ unsigned int
 priv_compute_conncheck_timer(agent_t *agent,
     stream_t *stream)
 {
-  struct list_head *item;
   uint32_t waiting_and_in_progress = 0; 
   unsigned int rto = 0; 
+  candidate_check_pair_t *pair = NULL;
 
-  list_for_each(item,&stream->connchecks.list) {
-    candidate_check_pair_t *pair = list_entry(item,candidate_check_pair_t,list);
-
+  TAILQ_FOREACH(pair,&stream->connchecks,list) {
     if (pair->state == ICE_CHECK_IN_PROGRESS ||
         pair->state == ICE_CHECK_WAITING)
       waiting_and_in_progress++;
@@ -1537,11 +1522,9 @@ priv_conn_check_tick_stream(stream_t *stream, agent_t *agent, struct timeval *no
            s_nominated = 0, s_waiting_for_nomination = 0;
   uint32_t frozen = 0, waiting = 0;
   int keep_timer_going = ICE_FALSE;
-  struct list_head *i;
+  candidate_check_pair_t *p = NULL;
 
-  list_for_each(i,&stream->connchecks.list) {
-    candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
-
+  TAILQ_FOREACH(p,&stream->connchecks,list) {
     if (p->state == ICE_CHECK_IN_PROGRESS) {
       if (p->stun_message.buffer == NULL) {
 	     ICE_DEBUG("Agent %p : STUN connectivity check was cancelled, marking as done.", agent);
@@ -1638,15 +1621,11 @@ priv_conn_check_tick_stream(stream_t *stream, agent_t *agent, struct timeval *no
   if (s_nominated < stream->n_components && s_waiting_for_nomination) {
     keep_timer_going = ICE_TRUE;
     if (agent->controlling_mode) {
-      struct list_head *component_item;
       component_t *component = NULL;
 
-      //list_for_each(component_item,&stream->components.list) {
-      //  component_t *component = list_entry(component_item,component_t,list);
       TAILQ_FOREACH(component,&stream->components,list) {
-        struct list_head *k;
-        list_for_each(k,&stream->connchecks.list) {
-           candidate_check_pair_t *p = list_entry(k,candidate_check_pair_t,list);
+        candidate_check_pair_t *p = NULL;
+        TAILQ_FOREACH(p,&stream->connchecks,list) {
      	     /* note: highest priority item selected (list always sorted) */
 	        if (p->component_id == component->id &&
               (p->state == ICE_CHECK_SUCCEEDED ||
@@ -1714,11 +1693,14 @@ priv_update_check_list_failed_components(agent_t *agent, stream_t *stream)
    // note: iterate the conncheck list for each component separately //
    for (c = 0; c < components; c++) {
       component_t *comp = NULL;
+      candidate_check_pair_t *p = NULL;
+
       if (agent_find_component(agent, stream->id, c+1, NULL, &comp) != ICE_OK)
          continue;
 
-      list_for_each(i,&stream->connchecks.list) {
-         candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
+      //list_for_each(i,&stream->connchecks.list) {
+      //   candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
+      TAILQ_FOREACH(p,&stream->connchecks,list) {
 
          if ( (p->agent != agent) || (p->stream_id != stream->id) ) {
             ICE_ERROR("stream info mismatched");
@@ -1760,7 +1742,6 @@ priv_conn_check_tick_unlocked(agent_t *agent)
 {
   candidate_check_pair_t *pair = NULL;
   int keep_timer_going = ICE_FALSE;
-  struct list_head *i, *j;
   struct timeval now;
   stream_t *stream = NULL;
 
@@ -1768,8 +1749,6 @@ priv_conn_check_tick_unlocked(agent_t *agent)
   gettimeofday(&now,NULL);
 
   /* step: find the highest priority waiting check and send it */
-  //list_for_each(i,&agent->streams.list) {
-  //  stream_t *stream = list_entry(i,stream_t,list);
   TAILQ_FOREACH(stream,&agent->streams,list) {
 
     pair = priv_conn_check_find_next_waiting(&stream->connchecks);
@@ -1784,8 +1763,6 @@ priv_conn_check_tick_unlocked(agent_t *agent)
     keep_timer_going = priv_conn_check_unfreeze_next(agent);
   }
 
-  //list_for_each(j,&agent->streams.list) {
-  //  stream_t *stream = list_entry(j,stream_t,list);
   TAILQ_FOREACH(stream,&agent->streams,list) {
     int res = priv_conn_check_tick_stream(stream, agent, &now);
     if (res == ICE_TRUE)
@@ -1796,13 +1773,9 @@ priv_conn_check_tick_unlocked(agent_t *agent)
   /* step: stop timer if no work left */
   if (keep_timer_going != ICE_TRUE) {
     ICE_DEBUG("Agent %p: stopping conncheck timer", agent);
-    //list_for_each(i,&agent->streams.list) {
-    //  stream_t *stream = list_entry(i,stream_t,list);
     TAILQ_FOREACH(stream,&agent->streams,list) {
       component_t *component = NULL;
       priv_update_check_list_failed_components(agent, stream);
-      //list_for_each(j,&stream->components.list) {
-      //  component_t *component = list_entry(j,component_t,list);
       TAILQ_FOREACH(component,&stream->components,list) {
         priv_update_check_list_state_for_ready(agent, stream, component);
       }
@@ -1980,14 +1953,11 @@ conncheck_stun_validater(StunAgent *agent,
  */
 static void priv_recalculate_pair_priorities(agent_t *agent)
 {
-  struct list_head *i,*j;
+  candidate_check_pair_t *p = NULL;
   stream_t *stream = NULL;
 
-  //list_for_each(i,&agent->streams.list) {
-  //  stream_t *stream = list_entry(i,stream_t,list);
   TAILQ_FOREACH(stream,&agent->streams,list) {
-    list_for_each(j,&stream->connchecks.list) {
-      candidate_check_pair_t *p = list_entry(j,candidate_check_pair_t,list);
+    TAILQ_FOREACH(p,&stream->connchecks,list) {
       p->priority = agent_candidate_pair_priority(agent, p->local, p->remote);
     }
   }
@@ -2116,7 +2086,7 @@ priv_store_pending_check (agent_t *agent, component_t *component,
  */
 static void priv_conn_check_unfreeze_related (agent_t *agent, stream_t *stream, candidate_check_pair_t *ok_check)
 {
-  struct list_head *i,*j;
+  candidate_check_pair_t *p = NULL;
   int unfrozen = 0;
 
   if ( ok_check == NULL || ok_check->state == ICE_CHECK_SUCCEEDED 
@@ -2124,9 +2094,7 @@ static void priv_conn_check_unfreeze_related (agent_t *agent, stream_t *stream, 
      return;
 
   /* step: perform the step (1) of 'Updating Pair States' */
-  list_for_each(i,&stream->connchecks.list) {
-    candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
-   
+  TAILQ_FOREACH(p,&stream->connchecks,list) {
     if (p->stream_id == ok_check->stream_id) {
       if (p->state == ICE_CHECK_FROZEN &&
 	       strcmp(p->foundation, ok_check->foundation) == 0) {
@@ -2143,12 +2111,9 @@ static void priv_conn_check_unfreeze_related (agent_t *agent, stream_t *stream, 
   if (stream_all_components_ready(stream) == ICE_OK) {
     /* step: unfreeze checks from other streams */
     stream_t *s = NULL;
-    //list_for_each(i,&agent->streams.list) {
-    //  stream_t *s = list_entry(i,stream_t,list);
     TAILQ_FOREACH(s,&agent->streams,list) {
-      list_for_each(j,&stream->connchecks.list) {
-	      candidate_check_pair_t *p = list_entry(j,candidate_check_pair_t,list);
-
+	    candidate_check_pair_t *p = NULL;
+      TAILQ_FOREACH(p,&stream->connchecks,list) {
 	      if (p->stream_id == s->id &&
       	    p->stream_id != ok_check->stream_id) {
 	        if (p->state == ICE_CHECK_FROZEN &&
@@ -2223,11 +2188,7 @@ priv_add_peer_reflexive_pair(agent_t *agent, uint32_t stream_id, uint32_t compon
   ICE_ERROR("nominated flag inherited, nominated=%u, pair=%p, parent_pair=%p", 
             pair->nominated, pair, parent_pair);
 
-  //stream->conncheck_list = g_slist_insert_sorted (stream->conncheck_list, pair,
-  //    (GCompareFunc)conn_check_compare);
-  
-  list_add(&pair->list,&stream->connchecks.list);
-  list_sort(NULL,&stream->connchecks.list,conn_check_compare);
+  conn_check_insert(&stream->connchecks,pair);
 
   return pair;
 }
@@ -2255,7 +2216,7 @@ priv_process_response_check_for_peer_reflexive(agent_t *agent, stream_t *stream,
 {
   candidate_check_pair_t *new_pair = NULL;
   address_t mapped;
-  struct list_head *i, *j;
+  struct list_head *j;
   int local_cand_matches = ICE_FALSE;
 
   address_set_from_sockaddr(&mapped, mapped_sockaddr);
@@ -2263,14 +2224,14 @@ priv_process_response_check_for_peer_reflexive(agent_t *agent, stream_t *stream,
   list_for_each(j,&component->local_candidates.list) {
     candidate_t *cand = list_entry(j,candidate_t,list);
     if (address_equal (&mapped, &cand->addr)) {
+      candidate_check_pair_t *pair = NULL;
       local_cand_matches = ICE_TRUE;
 
       /* We always need to select the peer-reflexive Candidate Pair in the case
        * of a TCP-ACTIVE local candidate, so we find it even if an incoming
        * check matched an existing pair because it could be the original
        * ACTIVE-PASSIVE candidate pair which was retriggered */
-      list_for_each(i,&stream->connchecks.list) {
-        candidate_check_pair_t *pair = list_entry(i,candidate_check_pair_t,list);
+      TAILQ_FOREACH(pair,&stream->connchecks,list) {
         if (pair->local == cand && remote_candidate == pair->remote) {
           new_pair = pair;
           ICE_DEBUG("Agent %p : got pair matched, pair=%p", agent, new_pair);
@@ -2329,16 +2290,15 @@ priv_map_reply_to_conn_check_request(agent_t *agent, stream_t *stream, component
     struct sockaddr addr;
   } sockaddr;
   socklen_t socklen = sizeof (sockaddr);
-  struct list_head *i;
   StunUsageIceReturn res;
   int trans_found = ICE_FALSE;
   StunTransactionId discovery_id;
   StunTransactionId response_id;
+  candidate_check_pair_t *p = NULL;
 
   stun_message_id(resp, response_id);
 
-  list_for_each(i,&stream->connchecks.list) {
-    candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
+  TAILQ_FOREACH(p,&stream->connchecks,list) {
 
     ICE_DEBUG("buffer, pair=%p, buffer=%p", p, p->stun_message.buffer);
     if (p->stun_message.buffer) {
@@ -2950,21 +2910,18 @@ conn_check_stop(agent_t *agent)
 
 void conn_check_prune_stream(agent_t *agent, stream_t *stream)
 {
-  struct list_head *i;
   stream_t *s = NULL;
   int keep_going = 0;
 
   ICE_DEBUG("FIXME: freeing conncheck_list of stream, agent=%p,stream=%p", agent, stream);
-  if (!list_empty(&stream->connchecks.list)) {
+  if (!TAILQ_EMPTY(&stream->connchecks)) {
   //  g_slist_free_full (stream->conncheck_list, conn_check_free_item);
   //  stream->conncheck_list = NULL;
-    INIT_LIST_HEAD(&stream->connchecks.list);
+    TAILQ_INIT(&stream->connchecks);
   }
 
-  //list_for_each(i,&agent->streams.list) {
-  //  stream_t *s = list_entry(i,stream_t,list);
   TAILQ_FOREACH(s,&agent->streams,list) {
-    if ( !list_empty(&s->connchecks.list) ) {
+    if (!TAILQ_EMPTY(&s->connchecks)) {
       keep_going = 1;
       break;
     }

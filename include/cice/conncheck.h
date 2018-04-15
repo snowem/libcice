@@ -76,7 +76,6 @@ typedef enum
 
 struct _candidate_check_pair
 {
-  struct list_head list;
   agent_t *agent;
   uint32_t stream_id;
   uint32_t component_id;
@@ -93,7 +92,10 @@ struct _candidate_check_pair
   uint8_t stun_buffer[STUN_MAX_MESSAGE_SIZE_IPV6];
   StunTimer timer;
   StunMessage stun_message;
+
+  TAILQ_ENTRY(_candidate_check_pair) list;
 };
+typedef TAILQ_HEAD(_candidate_check_pair_head, _candidate_check_pair) candidate_check_pair_head_t;
 
 typedef struct {
   agent_t *agent;
