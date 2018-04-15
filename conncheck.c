@@ -49,7 +49,6 @@
 #include "cice/base64.h"
 #include "cice/component.h"
 #include "cice/conncheck.h"
-#include "cice/list_sort.h"
 #include "cice/network.h"
 #include "cice/types.h"
 #include "cice/utils.h"

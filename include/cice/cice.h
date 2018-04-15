@@ -46,7 +46,6 @@ extern "C" {
 #include "cice/event.h"
 #include "cice/interfaces.h"
 #include "cice/list.h"
-#include "cice/list_sort.h"
 #include "cice/log.h"
 #include "cice/network.h"
 #include "cice/socket.h"
