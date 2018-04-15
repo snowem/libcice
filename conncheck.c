@@ -1664,7 +1664,7 @@ priv_conn_check_tick_stream(stream_t *stream, agent_t *agent, struct timeval *no
 static void
 priv_update_check_list_failed_components(agent_t *agent, stream_t *stream)
 {
-   struct list_head *i;
+   candidate_discovery_t *d = NULL;
    uint32_t c, components = stream->n_components;
 
    ICE_DEBUG("priv_update_check_list_failed_components");
@@ -1675,15 +1675,14 @@ priv_update_check_list_failed_components(agent_t *agent, stream_t *stream)
    if ( agent == NULL || stream == NULL ) 
       return;
    components = stream->n_components;
-   list_for_each(i,&agent->discovery_list.list) {
-      candidate_discovery_t *d = list_entry(i,candidate_discovery_t,list);
+   TAILQ_FOREACH(d,&agent->discovery_list,list) {
       /* There is still discovery ogoing for this stream,
        * so don't fail any of it's candidates. */
       if (d->stream == stream && !d->done)
          return;
    }
 
-   if (!list_empty(&agent->discovery_list.list)) {
+   if (!TAILQ_EMPTY(&agent->discovery_list)) {
       ICE_DEBUG("discovery list not empty");
       return;
    }
@@ -1696,10 +1695,7 @@ priv_update_check_list_failed_components(agent_t *agent, stream_t *stream)
       if (agent_find_component(agent, stream->id, c+1, NULL, &comp) != ICE_OK)
          continue;
 
-      //list_for_each(i,&stream->connchecks.list) {
-      //   candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
       TAILQ_FOREACH(p,&stream->connchecks,list) {
-
          if ( (p->agent != agent) || (p->stream_id != stream->id) ) {
             ICE_ERROR("stream info mismatched");
             return;
@@ -1714,7 +1710,7 @@ priv_update_check_list_failed_components(agent_t *agent, stream_t *stream)
       /* note: all checks have failed
        * Set the component to FAILED only if it actually had remote candidates
        * that failed.. */
-      if (i == NULL && comp != NULL && !list_empty(&comp->remote_candidates.list)) {
+      if (comp != NULL && !list_empty(&comp->remote_candidates.list)) {
         ICE_DEBUG("component failed, sid=%u, cid=%u", stream->id, c + 1);
         agent_signal_component_state_change (agent, 
   				   stream->id,
@@ -2435,16 +2431,14 @@ priv_map_reply_to_discovery_request(agent_t *agent, StunMessage *resp)
   } alternate;
   socklen_t alternatelen = sizeof (sockaddr);
 
-  struct list_head *i;
+  candidate_discovery_t *d = NULL;
   StunUsageBindReturn res;
   int trans_found = ICE_FALSE;
   StunTransactionId discovery_id;
   StunTransactionId response_id;
   stun_message_id (resp, response_id);
 
-  list_for_each(i,&agent->discovery_list.list ) {
-    candidate_discovery_t *d = list_entry(i,candidate_discovery_t,list);
-
+  TAILQ_FOREACH(d,&agent->discovery_list,list ) {
     if (d->type == ICE_CANDIDATE_TYPE_SERVER_REFLEXIVE &&
         d->stun_message.buffer) {
       stun_message_id (&d->stun_message, discovery_id);
@@ -2583,8 +2577,10 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
    /* Check for discovery candidates stun agents */
    if (valid == STUN_VALIDATION_BAD_REQUEST ||
        valid == STUN_VALIDATION_UNMATCHED_RESPONSE) {
-      list_for_each(i,&agent->discovery_list.list) {
-         candidate_discovery_t *d = list_entry(i,candidate_discovery_t,list);
+      candidate_discovery_t *d = NULL;
+      //list_for_each(i,&agent->discovery_list.list) {
+      //   candidate_discovery_t *d = list_entry(i,candidate_discovery_t,list);
+      TAILQ_FOREACH(d,&agent->discovery_list,list) {
          if (d->stream == stream && d->component == component &&
              d->nicesock == nicesock) {
             valid = stun_agent_validate (&d->stun_agent, &req,

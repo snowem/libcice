@@ -735,10 +735,9 @@ discovery_discover_tcp_server_reflexive_candidates (
  */
 void discovery_prune_stream(agent_t *agent, uint32_t stream_id)
 {
-  struct list_head *i;
+  candidate_discovery_t *cand = NULL;
 
-  list_for_each(i,&agent->discovery_list.list) {
-    candidate_discovery_t *cand = list_entry(i,candidate_discovery_t,list);
+  TAILQ_FOREACH(cand,&agent->discovery_list,list) {
     if (cand->stream->id == stream_id) {
        ICE_DEBUG("FIXME: free discovery list");
       //agent->discovery_list = g_slist_remove (agent->discovery_list, cand);
@@ -780,16 +779,15 @@ discovery_free_item(candidate_discovery_t *cand)
 void
 discovery_free(agent_t *agent) 
 {
-  struct list_head *i, *n;
+  candidate_discovery_t *cand = NULL;
 
-  list_for_each_safe(i,n,&agent->discovery_list.list) {
-    candidate_discovery_t *cand = list_entry(i,candidate_discovery_t,list);
-    list_del(&cand->list);
+  while (!TAILQ_EMPTY(&agent->discovery_list)) {
+    cand = TAILQ_FIRST(&agent->discovery_list);
+    TAILQ_REMOVE(&agent->discovery_list, cand, list);
     discovery_free_item (cand);
   }
 
-
-   return;
+  return;
 }
 
 void

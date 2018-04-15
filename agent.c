@@ -156,7 +156,7 @@ ice_agent_new(event_ctx_t *base, IceCompatibility compat, int control_mode) {
    /* init list of objects */
    TAILQ_INIT(&agent->local_addresses);
    TAILQ_INIT(&agent->streams);       
-   INIT_LIST_HEAD(&agent->discovery_list.list);
+   TAILQ_INIT(&agent->discovery_list);
    TAILQ_INIT(&agent->refresh_list);
 
    return agent;
