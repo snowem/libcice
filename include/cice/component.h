@@ -99,14 +99,16 @@ struct _candidate_pair
 
 struct _incoming_check
 {
-  struct list_head list;
   address_t from;
   socket_t *local_socket;
   uint32_t priority;
   int use_candidate;
   uint8_t *username;
   uint16_t username_len;
+
+  TAILQ_ENTRY(_incoming_check) list;
 };
+typedef TAILQ_HEAD(_incoming_check_head, _incoming_check) incoming_check_head_t;
 
 struct _component
 {
@@ -117,7 +119,7 @@ struct _component
   candidate_t remote_candidates;   /* list of candidate_t objs */
   candidate_t *restart_candidate;  /* for storing active remote candidate during a restart */
   candidate_pair_t selected_pair;  /* independent from checklists, 
-                   				        see ICE 11.1. "Sending Media" (ID-19) */
+                                      see ICE 11.1. "Sending Media" (ID-19) */
 
   void *tcp;                       /* pointer to PseudoTcpSocket */
   void *agent;                     /* pointer to agent_t */
@@ -132,7 +134,7 @@ struct _component
   uint16_t min_port;
   uint16_t max_port;
 
-  incoming_check_t incoming_checks; /* list of IncomingCheck objs */
+  incoming_check_head_t incoming_checks; /* list of incoming_check objs */
 
   TAILQ_ENTRY(_component) list;
 };
@@ -165,7 +167,7 @@ component_set_selected_remote_candidate(agent_t *agent,
        component_t *component, candidate_t *candidate);
 
 void
-incoming_check_free(incoming_check_t *icheck);
+incoming_check_free(incoming_check_head_t *icheck);
 
 void
 ice_component_close(component_t *c);

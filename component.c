@@ -48,7 +48,7 @@
 #include "cice/network.h"
 
 void
-incoming_check_free(incoming_check_t *icheck)
+incoming_check_free(incoming_check_head_t *icheck)
 {
    /* FIXME: incoming_check_free */
    /*free (icheck->username);
@@ -73,7 +73,7 @@ component_new (agent_t *agent, stream_t *stream, uint32_t id)
   component->stream = stream;
   INIT_LIST_HEAD(&component->local_candidates.list);
   INIT_LIST_HEAD(&component->remote_candidates.list);
-  INIT_LIST_HEAD(&component->incoming_checks.list);
+  TAILQ_INIT(&component->incoming_checks);
 
   ice_agent_init_stun_agent(agent, &component->stun_agent);
   return component;

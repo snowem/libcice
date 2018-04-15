@@ -1127,11 +1127,10 @@ static void
 priv_preprocess_conn_check_pending_data(agent_t *agent, stream_t *stream, 
      component_t *component, candidate_check_pair_t *pair)
 {
+   incoming_check_t *icheck = NULL;
    int added = 0;
-   struct list_head *pos;
 
-   list_for_each(pos,&component->incoming_checks.list) {
-      incoming_check_t *icheck = list_entry(pos,incoming_check_t,list);
+   TAILQ_FOREACH(icheck,&component->incoming_checks,list) {
       ICE_DEBUG("Checking stored early-icheck, sid=%u, cid=%u, local=%s, remote=%s",
              stream->id, component->id,pair->local->foundation,pair->remote->foundation);
       print_address(&icheck->from);
@@ -1199,13 +1198,14 @@ continue_cancel:
 void 
 conn_check_remote_candidates_set(agent_t *agent)
 {
-   struct list_head *k, *l, *m, *n;
+   struct list_head *l, *m, *n;
    stream_t *stream = NULL;
 
    TAILQ_FOREACH(stream,&agent->streams,list) {
       candidate_check_pair_t *pair = NULL;
       TAILQ_FOREACH(pair,&stream->connchecks,list) {
          component_t *component = stream_find_component_by_id(stream, pair->component_id);
+         incoming_check_t *icheck = NULL;
          int match = 0;
 
          ICE_DEBUG("stream preprocess, sid=%u,cid=%u,local=%s,remote=%s",
@@ -1215,8 +1215,7 @@ conn_check_remote_candidates_set(agent_t *agent)
           	and section 7.2.1.5 */
          priv_preprocess_conn_check_pending_data(agent, stream, component, pair);
 
-         list_for_each(k,&component->incoming_checks.list) {
-            incoming_check_t *icheck = list_entry(k,incoming_check_t,list);
+         TAILQ_FOREACH(icheck,&component->incoming_checks,list) {
             /* sect 7.2.1.3., "Learning Peer Reflexive Candidates", has to
              * be handled separately */
             ICE_DEBUG("learning peer reflexive candidate, priority=%u",icheck->priority);
@@ -1323,7 +1322,7 @@ conn_check_remote_candidates_set(agent_t *agent)
           * is called */
          ICE_DEBUG("process the pending checks");
          incoming_check_free(&component->incoming_checks);
-         INIT_LIST_HEAD(&component->incoming_checks.list);
+         TAILQ_INIT(&component->incoming_checks);
          /*g_slist_free_full (component->incoming_checks, (GDestroyNotify) incoming_check_free);*/
          //component->incoming_checks = NULL;
 
@@ -2043,23 +2042,22 @@ priv_store_pending_check (agent_t *agent, component_t *component,
     const address_t *from, socket_t *sockptr, uint8_t *username,
     uint16_t username_len, uint32_t priority, int use_candidate)
 {
-  struct list_head *i;
   incoming_check_t *icheck;
   int num;
   ICE_DEBUG("Agent %p : Storing pending check.", agent);
  
   num = 0; 
-  list_for_each(i,&component->incoming_checks.list) {
+  TAILQ_FOREACH(icheck,&component->incoming_checks,list) {
      num++;
   }
-  if ( !list_empty(&component->incoming_checks.list) &&
+  if ( !TAILQ_EMPTY(&component->incoming_checks) &&
       num >= ICE_AGENT_MAX_REMOTE_CANDIDATES) {
     ICE_DEBUG("Agent %p : WARN: unable to store information for early incoming check.", agent);
     return -1;
   }
 
   icheck = ICE_MALLOC(incoming_check_t);
-  list_add(&icheck->list,&component->incoming_checks.list);
+  TAILQ_INSERT_HEAD(&component->incoming_checks,icheck,list);
   icheck->from = *from;
   icheck->local_socket = sockptr;
   icheck->priority = priority;
