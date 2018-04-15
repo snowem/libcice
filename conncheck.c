@@ -599,17 +599,16 @@ int
 conn_check_add_for_candidate(agent_t *agent, uint32_t stream_id, 
       component_t *component, candidate_t *remote)
 {
-   struct list_head *pos;
    int added = 0;
    int ret = 0;
+   candidate_t *local = NULL;
 
    if ( remote == NULL || agent == NULL || component == NULL ) {
       ICE_ERROR("null pointers, agent=%p,component=%p,remote=%p",agent,component,remote);
       return ICE_ERR;
    }
 
-   list_for_each(pos,&component->local_candidates.list) {
-      candidate_t *local = list_entry(pos,candidate_t,list);
+   TAILQ_FOREACH(local,&component->local_candidates,list) {
       ret = conn_check_add_for_candidate_pair(agent, stream_id, component, local, remote);
       if (ret == ICE_OK) {
          ++added;
@@ -626,9 +625,9 @@ int
 conn_check_add_for_local_candidate(agent_t *agent, 
   uint32_t stream_id, component_t *component, candidate_t *local)
 {
-  struct list_head *pos;
   int added = 0;
   int ret = 0;
+  candidate_t *remote = NULL;
 
 
   if (local == NULL)
@@ -636,8 +635,7 @@ conn_check_add_for_local_candidate(agent_t *agent,
   
   ICE_DEBUG("new candidate pairs, local=%p, added=%d",local, added);
 
-  list_for_each(pos,&component->remote_candidates.list) {
-    candidate_t *remote = list_entry(pos,candidate_t,list);
+  TAILQ_FOREACH(remote,&component->remote_candidates,list) {
     ICE_ERROR("remote candidate info, stream_id=%d, foundation=%s(%p)",
              stream_id, remote->foundation, remote);
     ret = conn_check_add_for_candidate_pair(agent, stream_id, component, local, remote);
@@ -663,7 +661,6 @@ conn_check_add_for_local_candidate(agent_t *agent,
 static int 
 priv_conn_keepalive_tick_unlocked(agent_t *agent)
 {
-  struct list_head *k;
   int errors = 0;
   int ret = ICE_FALSE;
   size_t buf_len = 0;
@@ -777,6 +774,7 @@ priv_conn_keepalive_tick_unlocked(agent_t *agent)
           uint8_t stun_buffer[STUN_MAX_MESSAGE_SIZE_IPV6];
           StunMessage stun_message;
           size_t buffer_len = 0;
+          candidate_t *candidate = NULL;
 
           address_set_port (&stun_server, agent->stun_server_port);
 
@@ -790,8 +788,7 @@ priv_conn_keepalive_tick_unlocked(agent_t *agent)
           buffer_len = stun_usage_bind_create (&stun_agent,
               &stun_message, stun_buffer, sizeof(stun_buffer));
 
-          list_for_each(k,&component->local_candidates.list) {
-            candidate_t *candidate = list_entry(k,candidate_t,list);
+          TAILQ_FOREACH(candidate,&component->local_candidates,list) {
             if (candidate->type == ICE_CANDIDATE_TYPE_HOST &&
                 candidate->transport == ICE_CANDIDATE_TRANSPORT_UDP) {
               // send the conncheck 
@@ -1014,8 +1011,8 @@ priv_schedule_triggered_check(agent_t *agent, stream_t *stream, component_t *com
     socket_t *local_socket, candidate_t *remote_cand, int use_candidate)
 {
   candidate_check_pair_t *p = NULL;
-  struct list_head *i;
   candidate_t *local = NULL;
+  int found = 0;
 
   if ( remote_cand == NULL )
      return ICE_ERR;
@@ -1023,8 +1020,6 @@ priv_schedule_triggered_check(agent_t *agent, stream_t *stream, component_t *com
   //ICE_DEBUG("trigger check, use_candidate=%u, conncheck_list=%u",
   //          use_candidate, list_size(&stream->connchecks.list));
 
-  //list_for_each(i,&stream->connchecks.list) {
-  //    candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
   TAILQ_FOREACH(p,&stream->connchecks,list) {
       if (p->component_id == component->id && 
           p->remote == remote_cand &&
@@ -1090,14 +1085,15 @@ priv_schedule_triggered_check(agent_t *agent, stream_t *stream, component_t *com
       }
   }
 
-  list_for_each(i,&component->local_candidates.list) {
-    local = list_entry(i,candidate_t,list);
-    if (local->sockptr == local_socket)
+  TAILQ_FOREACH(local,&component->local_candidates,list) {
+    if (local->sockptr == local_socket) {
+      found = 1;
       break;
+    }
   }
 
-  if (i) {
-    ICE_ERROR("Agent %p : Adding a triggered check to conn.check list (local=%p).", agent, local);
+  if (found) {
+    ICE_DEBUG("Agent %p : Adding a triggered check to conn.check list (local=%p).", agent, local);
     priv_add_new_check_pair(agent, stream->id, component, 
           local, remote_cand, ICE_CHECK_WAITING, use_candidate);
     return ICE_TRUE;
@@ -1198,7 +1194,6 @@ continue_cancel:
 void 
 conn_check_remote_candidates_set(agent_t *agent)
 {
-   struct list_head *l, *m, *n;
    stream_t *stream = NULL;
 
    TAILQ_FOREACH(stream,&agent->streams,list) {
@@ -1216,11 +1211,11 @@ conn_check_remote_candidates_set(agent_t *agent)
          priv_preprocess_conn_check_pending_data(agent, stream, component, pair);
 
          TAILQ_FOREACH(icheck,&component->incoming_checks,list) {
+            candidate_t *cand = NULL;
             /* sect 7.2.1.3., "Learning Peer Reflexive Candidates", has to
              * be handled separately */
             ICE_DEBUG("learning peer reflexive candidate, priority=%u",icheck->priority);
-            list_for_each(l,&component->remote_candidates.list) {
-               candidate_t *cand = list_entry(l,candidate_t,list);
+            TAILQ_FOREACH(cand,&component->remote_candidates,list) {
                print_address(&icheck->from);
                print_address(&cand->addr);
                if (address_equal (&icheck->from, &cand->addr)) {
@@ -1244,15 +1239,14 @@ conn_check_remote_candidates_set(agent_t *agent)
                   /* We need to find which local candidate was used */
                   uint8_t uname[ICE_STREAM_MAX_UNAME];
                   uint32_t uname_len;
+                  candidate_t *rcand = NULL;
+                  candidate_t *lcand = NULL;
 
                   ICE_DEBUG("Agent %p: We have a peer-reflexive candidate in a "
                         "stored pending check", agent);
 
-                  list_for_each(m,&component->remote_candidates.list) {
-                     list_for_each(n,&component->local_candidates.list) {
-                        candidate_t *rcand = list_entry(m,candidate_t,list);
-                        candidate_t *lcand = list_entry(n,candidate_t,list);
-
+                  TAILQ_FOREACH(rcand,&component->remote_candidates,list) {
+                     TAILQ_FOREACH(lcand,&component->local_candidates,list) {
                         uname_len = priv_create_username(agent, stream,
                                            component->id, rcand, lcand,
                                            uname, sizeof(uname), 1);
@@ -1261,10 +1255,6 @@ conn_check_remote_candidates_set(agent_t *agent)
                             icheck->username_len, uname_len,
                             icheck->username && uname_len == icheck->username_len &&
                             memcmp(uname, icheck->username, icheck->username_len) == 0);
-                /*stun_ICE_DEBUG_bytes ("  first username:  ",
-                    icheck->username,
-                    icheck->username? icheck->username_len : 0);
-                stun_debug_bytes ("  second username: ", uname, uname_len);*/
 
                         if (icheck->username &&
                             uname_len == icheck->username_len &&
@@ -1276,12 +1266,12 @@ conn_check_remote_candidates_set(agent_t *agent)
                      }
                   }
                } else {
-                  list_for_each(l,&component->local_candidates.list) {
-                      candidate_t *cand = list_entry(l,candidate_t,list);
-                      if (address_equal (&cand->addr, &icheck->local_socket->addr)) {
-                         local_candidate = cand;
-                         break;
-                      }
+                  candidate_t *cand = NULL;
+                  TAILQ_FOREACH(cand,&component->local_candidates,list) {
+                    if (address_equal (&cand->addr, &icheck->local_socket->addr)) {
+                       local_candidate = cand;
+                       break;
+                    }
                   }
                }
 
@@ -1323,9 +1313,6 @@ conn_check_remote_candidates_set(agent_t *agent)
          ICE_DEBUG("process the pending checks");
          incoming_check_free(&component->incoming_checks);
          TAILQ_INIT(&component->incoming_checks);
-         /*g_slist_free_full (component->incoming_checks, (GDestroyNotify) incoming_check_free);*/
-         //component->incoming_checks = NULL;
-
 
       } // connchecks
       prune_cancelled_conn_check(&stream->connchecks);
@@ -1710,7 +1697,7 @@ priv_update_check_list_failed_components(agent_t *agent, stream_t *stream)
       /* note: all checks have failed
        * Set the component to FAILED only if it actually had remote candidates
        * that failed.. */
-      if (comp != NULL && !list_empty(&comp->remote_candidates.list)) {
+      if (comp != NULL && !TAILQ_EMPTY(&comp->remote_candidates)) {
         ICE_DEBUG("component failed, sid=%u, cid=%u", stream->id, c + 1);
         agent_signal_component_state_change (agent, 
   				   stream->id,
@@ -1868,11 +1855,11 @@ conncheck_stun_validater(StunAgent *agent,
         uint8_t **password, size_t *password_len, void *user_data)
 {
    conncheck_validater_data *data;
-   candidate_t *candlist;
-   struct list_head *i;
+   candidate_head_t *candlist;
    char *ufrag = NULL;
    size_t ufrag_len;
    int msn_msoc_nice_compatibility;
+   candidate_t *cand = NULL;
 
    data = (conncheck_validater_data*) user_data;
    msn_msoc_nice_compatibility =
@@ -1885,9 +1872,7 @@ conncheck_stun_validater(StunAgent *agent,
    else 
       candlist = &data->component->local_candidates;
 
-   list_for_each(i,&candlist->list) {
-      candidate_t *cand = list_entry(i,candidate_t,list);
-
+   TAILQ_FOREACH(cand,candlist,list) {
       ufrag = NULL;
       if (cand->username)
          ufrag = cand->username;
@@ -2209,13 +2194,12 @@ priv_process_response_check_for_peer_reflexive(agent_t *agent, stream_t *stream,
 {
   candidate_check_pair_t *new_pair = NULL;
   address_t mapped;
-  struct list_head *j;
   int local_cand_matches = ICE_FALSE;
+  candidate_t *cand = NULL;
 
   address_set_from_sockaddr(&mapped, mapped_sockaddr);
 
-  list_for_each(j,&component->local_candidates.list) {
-    candidate_t *cand = list_entry(j,candidate_t,list);
+  TAILQ_FOREACH(cand,&component->local_candidates,list) {
     if (address_equal (&mapped, &cand->addr)) {
       candidate_check_pair_t *pair = NULL;
       local_cand_matches = ICE_TRUE;
@@ -2541,7 +2525,6 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
    size_t rbuf_len = MAX_STUN_DATAGRAM_PAYLOAD;
    conncheck_validater_data validater_data = {agent, stream, component, NULL};
    StunValidationStatus valid;
-   struct list_head *i, *j;
    StunMessage req;
    StunMessage msg;
    int discovery_msg = ICE_FALSE;
@@ -2553,6 +2536,7 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
    candidate_t *remote_candidate = NULL;
    candidate_t *remote_candidate2 = NULL;
    candidate_t *local_candidate = NULL;
+   candidate_t *cand = NULL;
    ssize_t res;
 
    address_copy_to_sockaddr(from, &sockaddr.addr);
@@ -2578,8 +2562,6 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
    if (valid == STUN_VALIDATION_BAD_REQUEST ||
        valid == STUN_VALIDATION_UNMATCHED_RESPONSE) {
       candidate_discovery_t *d = NULL;
-      //list_for_each(i,&agent->discovery_list.list) {
-      //   candidate_discovery_t *d = list_entry(i,candidate_discovery_t,list);
       TAILQ_FOREACH(d,&agent->discovery_list,list) {
          if (d->stream == stream && d->component == component &&
              d->nicesock == nicesock) {
@@ -2599,8 +2581,6 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
    if (valid == STUN_VALIDATION_BAD_REQUEST ||
        valid == STUN_VALIDATION_UNMATCHED_RESPONSE) {
       candidate_refresh_t *r = NULL;
-      //list_for_each(i,&agent->refresh_list.list) {
-      //   candidate_refresh_t *r = list_entry(i,candidate_refresh_t,list);
       TAILQ_FOREACH(r,&agent->refresh_list,list) {
          ICE_DEBUG("Comparing %p to %p, %p to %p and %p and %p to %p", r->stream, stream, 
                r->component, component, r->nicesock, r->candidate->sockptr, nicesock);
@@ -2669,15 +2649,13 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
                    &username_len);
 
 
-   list_for_each(i, &component->remote_candidates.list) {
-      candidate_t *cand = list_entry(i,candidate_t,list);
+   TAILQ_FOREACH(cand,&component->remote_candidates,list) {
       if (address_equal (from, &cand->addr)) {
          remote_candidate = cand;
          break;
       }
    }
-   list_for_each(i, &component->local_candidates.list) {
-      candidate_t *cand = list_entry(i,candidate_t,list);
+   TAILQ_FOREACH(cand,&component->local_candidates,list) {
       if (address_equal (&nicesock->addr, &cand->addr)) {
          local_candidate = cand;
          break;
@@ -2691,12 +2669,11 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
    if (agent->compatibility == ICE_COMPATIBILITY_GOOGLE ||
        agent->compatibility == ICE_COMPATIBILITY_MSN ||
        agent->compatibility == ICE_COMPATIBILITY_OC2007) {
-
-      list_for_each(i,&component->remote_candidates.list) {
-         list_for_each(j,&component->local_candidates.list) {
+      candidate_t *rcand = NULL;
+      candidate_t *lcand = NULL;
+      TAILQ_FOREACH(rcand,&component->remote_candidates,list) {
+         TAILQ_FOREACH(lcand,&component->local_candidates,list) {
             int inbound = 0;
-            candidate_t *rcand = list_entry(i,candidate_t,list);
-            candidate_t *lcand = list_entry(j,candidate_t,list);
             /* If we receive a response, then the username is local:remote */
             if (agent->compatibility != ICE_COMPATIBILITY_MSN) {
                if (stun_message_get_class (&req) == STUN_REQUEST ||
@@ -2731,7 +2708,7 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
       }
    }
 
-   if (list_empty(&component->remote_candidates.list) &&
+   if (TAILQ_EMPTY(&component->remote_candidates) &&
        agent->compatibility == ICE_COMPATIBILITY_GOOGLE &&
        local_candidate == NULL &&
        discovery_msg == ICE_FALSE) {
@@ -2810,7 +2787,7 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
          if (stream->initial_binding_request_received != ICE_TRUE)
             agent_signal_initial_binding_request_received(agent, stream);
 
-         if (!list_empty(&component->remote_candidates.list) && remote_candidate == NULL) {
+         if (!TAILQ_EMPTY(&component->remote_candidates) && remote_candidate == NULL) {
             ICE_ERROR("Agent %p : No matching remote candidate for incoming check ->"
                   "peer-reflexive candidate.", agent);
             remote_candidate = discovery_learn_remote_peer_reflexive_candidate(
@@ -2832,7 +2809,7 @@ conn_check_handle_inbound_stun(agent_t *agent, stream_t *stream,
          priv_reply_to_conn_check(agent, stream, component, remote_candidate,
              from, nicesock, rbuf_len, rbuf, use_candidate);
 
-         if (list_empty(&component->remote_candidates.list)) {
+         if (TAILQ_EMPTY(&component->remote_candidates)) {
             /* case: We've got a valid binding request to a local candidate
              *       but we do not yet know remote credentials nor
              *       candidates. As per sect 7.2 of ICE (ID-19), we send a reply

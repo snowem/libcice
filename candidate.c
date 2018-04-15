@@ -53,8 +53,21 @@ candidate_new(IceCandidateType type)
   if (candidate == NULL)
      return NULL;
   ICE_MEMZERO(candidate,candidate_t);
-  INIT_LIST_HEAD(&candidate->list);
+  //INIT_LIST_HEAD(&candidate->list);
   candidate->type = type;
+  return candidate;
+}
+
+candidate_head_t *
+candidate_head_new()
+{
+  candidate_head_t *candidate;
+
+  candidate = ICE_MALLOC(candidate_head_t);
+  if (candidate == NULL)
+     return NULL;
+  ICE_MEMZERO(candidate,candidate_head_t);
+  TAILQ_INIT(candidate);
   return candidate;
 }
 

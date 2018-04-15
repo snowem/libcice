@@ -274,7 +274,6 @@ void agent_signal_gathering_done(agent_t *agent)
 
 void 
 agent_gathering_done (agent_t *agent) {
-   struct list_head *k, *l;
    stream_t *stream = NULL;
 
    if (agent == NULL)
@@ -283,8 +282,9 @@ agent_gathering_done (agent_t *agent) {
    TAILQ_FOREACH(stream,&agent->streams,list) {
       component_t *component = NULL;
       TAILQ_FOREACH(component,&stream->components,list) {
-         list_for_each(k,&component->local_candidates.list) {
-            candidate_t *local_candidate = list_entry(k,candidate_t,list);
+         candidate_t *local_candidate = NULL;
+         TAILQ_FOREACH(local_candidate,&component->local_candidates,list) {
+            candidate_t *remote_candidate = NULL;
 
             {
                char tmpbuf[INET6_ADDRSTRLEN];
@@ -297,8 +297,7 @@ agent_gathering_done (agent_t *agent) {
                         local_candidate->username, local_candidate->password);
             }
 
-            list_for_each(l,&component->remote_candidates.list) {
-               candidate_t *remote_candidate = list_entry(l,candidate_t,list);
+            TAILQ_FOREACH(remote_candidate,&component->remote_candidates,list) {
                candidate_check_pair_t *p = NULL;
                int found_pair = 0;
 
@@ -478,9 +477,8 @@ ice_agent_gather_candidates (agent_t *agent, uint32_t stream_id) {
   
    for (cid = 1; cid <= stream->n_components; cid++) {
       component_t *component = stream_find_component_by_id(stream, cid);
-      struct list_head *pos;
-      list_for_each(pos,&component->local_candidates.list) {
-         candidate_t *c = list_entry(pos,candidate_t,list);
+      candidate_t *c = NULL;
+      TAILQ_FOREACH(c,&component->local_candidates,list) {
          //agent_signal_new_candidate
          /* TODO: call 'new candidate' callback */
          print_address(&c->addr);
@@ -501,14 +499,12 @@ ice_agent_gather_candidates (agent_t *agent, uint32_t stream_id) {
 error:  
    if (ret != ICE_OK ) {
       for (cid = 1; cid <= stream->n_components; cid++) {
-         struct list_head *pos,*n;
          component_t *component = stream_find_component_by_id(stream, cid);
-         list_for_each_safe(pos,n,&component->local_candidates.list) {
-            //candidate_t *c = list_entry(pos,candidate_t,list);
-            //agent_remove_local_candidate(agent, c);
-            //INIT_LIST_HEAD(&component->local_candidates.list);
-            /* TODO: remove local candidate */
-            list_del(pos);
+         candidate_t *c = NULL;
+         while (!TAILQ_EMPTY(&component->local_candidates)) {
+            c = TAILQ_FIRST(&component->local_candidates);
+            TAILQ_REMOVE(&component->local_candidates, c, list);
+            //TODO: clean c
          }
       }
       /* TODO: stop discovery process */
@@ -734,12 +730,12 @@ done:
   return ret;
 }
 
-candidate_t*
+candidate_head_t*
 ice_agent_get_local_candidates(agent_t *agent, uint32_t stream_id, uint32_t component_id)
 {
   component_t *component;
-  candidate_t *ret = NULL;
-  struct list_head *pos;
+  candidate_head_t *ret = NULL;
+  candidate_t *c = NULL;
 
   if (agent == NULL || stream_id < 1 || component_id < 1) {
      return NULL;
@@ -749,15 +745,14 @@ ice_agent_get_local_candidates(agent_t *agent, uint32_t stream_id, uint32_t comp
     goto done;
   }
 
-  ret = candidate_new(ICE_CANDIDATE_TYPE_LAST);
+  ret = candidate_head_new();
   if ( ret == NULL )
      return NULL;
 
-  list_for_each(pos,&component->local_candidates.list) {
-     candidate_t *c = list_entry(pos,candidate_t,list);
+  TAILQ_FOREACH(c,&component->local_candidates,list) {
      candidate_t *copy = candidate_copy(c);
      if ( copy != NULL )
-       list_add(&copy->list,&ret->list) ;
+       TAILQ_INSERT_HEAD(ret,copy,list);
   }
 
 done:
@@ -840,7 +835,8 @@ priv_add_remote_candidate( agent_t *agent, uint32_t stream_id,
       return ICE_ERR;
     }
     candidate = candidate_new(type);
-    list_add(&candidate->list,&component->remote_candidates.list);
+    //list_add(&candidate->list,&component->remote_candidates.list);
+    TAILQ_INSERT_HEAD(&component->remote_candidates,candidate,list);
 
     candidate->stream_id = stream_id;
     candidate->component_id = component_id;
@@ -887,12 +883,11 @@ errors:
 
 static int
 _set_remote_candidates_locked(agent_t *agent, stream_t *stream,
-     component_t *component, const candidate_t *candidates) {
-  struct list_head *pos;
+     component_t *component, const candidate_head_t *candidates) {
   int added = 0;
+  candidate_t *d = NULL;
 
-  list_for_each(pos,&candidates->list) {
-     candidate_t *d = list_entry(pos,candidate_t,list);
+  TAILQ_FOREACH(d,candidates,list) {
      {
       char tmpbuf[INET6_ADDRSTRLEN];
       address_to_string (&d->addr, tmpbuf);
@@ -933,7 +928,7 @@ _set_remote_candidates_locked(agent_t *agent, stream_t *stream,
 
 int
 ice_agent_set_remote_candidates(agent_t *agent, uint32_t stream_id, 
-   uint32_t component_id, const candidate_t *candidates)
+   uint32_t component_id, const candidate_head_t *candidates)
 {
   int added = 0;
   stream_t *stream;
@@ -1463,12 +1458,12 @@ ice_agent_set_selected_remote_candidate( agent_t *agent, uint32_t stream_id,
   return ret;
 }
 
-candidate_t*
+candidate_head_t*
 ice_agent_get_remote_candidates(agent_t *agent, uint32_t stream_id, uint32_t component_id)
 {
   component_t *component;
-  struct list_head *item;
-  candidate_t *ret = 0;
+  candidate_head_t *ret = 0;
+  candidate_t *c = NULL;
 
   if ( agent == NULL || stream_id < 1 || component_id < 1 ) {
      return NULL;
@@ -1479,18 +1474,17 @@ ice_agent_get_remote_candidates(agent_t *agent, uint32_t stream_id, uint32_t com
      goto done;
   }    
   
-  ret = candidate_new(ICE_CANDIDATE_TYPE_LAST);
+  ret = candidate_head_new();
   if ( ret == NULL ) {
      ICE_ERROR("can not create candidate, sid=%u, cid=%u",stream_id,component_id);
      goto done;
   }
 
   ICE_DEBUG("copy candidate list, sid=%u, cid=%u",stream_id,component_id);
-  list_for_each(item,&component->remote_candidates.list) {
-     candidate_t *c = list_entry(item,candidate_t,list);
+  TAILQ_FOREACH(c,&component->remote_candidates,list) {
      candidate_t *copy = candidate_copy(c); 
      if ( copy != NULL ) {
-        list_add(&copy->list,&ret->list);
+        TAILQ_INSERT_HEAD(ret,copy,list);
      } else {
         ICE_ERROR("can not copy candidate, sid=%u, cid=%u",stream_id,component_id);
      }

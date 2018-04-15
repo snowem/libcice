@@ -142,7 +142,6 @@ void priv_generate_candidate_credentials (agent_t *agent,
  */
 static void priv_assign_foundation (agent_t *agent, candidate_t *candidate)
 {
-   struct list_head *candpos;
    stream_t *stream = NULL;
 
    if ( agent == NULL || candidate == NULL )
@@ -151,8 +150,8 @@ static void priv_assign_foundation (agent_t *agent, candidate_t *candidate)
    TAILQ_FOREACH(stream,&agent->streams,list) {
       component_t *component = NULL;
       TAILQ_FOREACH(component,&stream->components,list) {
-         list_for_each(candpos,&component->local_candidates.list) {
-            candidate_t *n = list_entry(candpos,candidate_t,list);
+         candidate_t *n = NULL;
+         TAILQ_FOREACH(n,&component->local_candidates,list) {
             assert( candidate != n );
 
 	if (candidate->type == n->type &&
@@ -201,14 +200,12 @@ static int
 priv_add_local_candidate_pruned (agent_t *agent, uint32_t stream_id, 
            component_t *component, candidate_t *candidate)
 {
-  struct list_head *pos;
+  candidate_t *c = NULL;
 
   if (candidate == NULL) 
      return ICE_ERR;
  
-  list_for_each(pos,&component->local_candidates.list) {
-     candidate_t *c = list_entry(pos,candidate_t,list);
-    
+  TAILQ_FOREACH(c,&component->local_candidates,list) {
     ICE_DEBUG("verifying candidate, sid=%u,cid=%u",c->stream_id,c->component_id);
     if (address_equal (&c->base_addr, &candidate->base_addr) &&
         address_equal (&c->addr, &candidate->addr) &&
@@ -221,7 +218,7 @@ priv_add_local_candidate_pruned (agent_t *agent, uint32_t stream_id,
 
   ICE_DEBUG("add new candidate, cand=%p",candidate);
   print_candidate(candidate,"new");
-  list_add(&candidate->list,&component->local_candidates.list);
+  TAILQ_INSERT_HEAD(&component->local_candidates,candidate,list);
   conn_check_add_for_local_candidate(agent, stream_id, component, candidate);
 
   return ICE_OK;
@@ -325,17 +322,16 @@ errors:
 
 static uint32_t priv_highest_remote_foundation (component_t *component)
 {
-  struct list_head *i;
   uint32_t highest = 1;
   char foundation[ICE_CANDIDATE_MAX_FOUNDATION];
 
   for (highest = 1;; highest++) {
     int taken = 0;
+    candidate_t *cand = NULL;
 
     snprintf (foundation, ICE_CANDIDATE_MAX_FOUNDATION, "remote-%u",
         highest);
-    list_for_each(i,&component->remote_candidates.list) {
-      candidate_t *cand = list_entry(i,candidate_t,list);
+    TAILQ_FOREACH(cand,&component->remote_candidates,list) {
       if (strncmp (foundation, cand->foundation,
               ICE_CANDIDATE_MAX_FOUNDATION) == 0) {
         taken = 1;
@@ -346,7 +342,6 @@ static uint32_t priv_highest_remote_foundation (component_t *component)
       return highest;
   }
 
-  //g_return_val_if_reached (highest);
   return highest;
 }
 
@@ -354,7 +349,6 @@ static uint32_t priv_highest_remote_foundation (component_t *component)
 
 static void priv_assign_remote_foundation (agent_t *agent, candidate_t *candidate)
 {
-  struct list_head *k;
   uint32_t next_remote_id;
   component_t *component = NULL;
   stream_t *stream = NULL;
@@ -362,13 +356,12 @@ static void priv_assign_remote_foundation (agent_t *agent, candidate_t *candidat
   TAILQ_FOREACH(stream,&agent->streams,list) {
     component_t *c = NULL;
     TAILQ_FOREACH(c,&stream->components,list) {
+      candidate_t *n = NULL;
 
       if (c->id == candidate->component_id)
         component = c;
 
-      list_for_each(k,&c->remote_candidates.list) {
-        candidate_t *n = list_entry(k,candidate_t,list);
-
+      TAILQ_FOREACH(n,&c->remote_candidates,list) {
         /* note: candidate must not on the remote candidate list */
         if (candidate == n)
            return;
@@ -501,8 +494,8 @@ candidate_t *discovery_learn_remote_peer_reflexive_candidate(
   /* note: candidate username and password are left NULL as stream 
      level ufrag/password are used */
 
-  //component->remote_candidates = g_slist_append (component->remote_candidates, candidate);
-  list_add(&candidate->list,&component->remote_candidates.list);
+  //list_add(&candidate->list,&component->remote_candidates.list);
+  TAILQ_INSERT_HEAD(&component->remote_candidates,candidate,list);
 
   agent_signal_new_remote_candidate (agent, candidate);
 
@@ -699,14 +692,13 @@ discovery_discover_tcp_server_reflexive_candidates (
   component_t *component;
   stream_t *stream;
   address_t base_addr = base_socket->addr;
-  struct list_head *i;
+  candidate_t *c = NULL;
 
   if (!agent_find_component(agent, stream_id, component_id, &stream, &component))
     return;
 
   address_set_port(&base_addr, 0);
-  list_for_each(i,&component->local_candidates.list) {
-    candidate_t *c = list_entry(i,candidate_t,list);
+  TAILQ_FOREACH(c,&component->local_candidates,list) {
     address_t caddr;
 
     caddr = c->addr;
