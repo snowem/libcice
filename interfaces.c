@@ -97,16 +97,16 @@ ice_interfaces_is_private_ip (const struct sockaddr *_sa)
   return 0;
 }
 
-struct list_head*
+int
 ice_interfaces_get_local_ips (address_head_t *head, int include_loopback)
 {
   struct ifaddrs *ifa, *results;
 
   if ( head == NULL ) 
-     return NULL;
+     return -1;
 
   if (getifaddrs (&results) < 0)
-      return NULL;
+      return -1;
 
   /* Loop through the interface list and get the IP address of each IF */
   for (ifa = results; ifa; ifa = ifa->ifa_next) {
@@ -167,7 +167,7 @@ ice_interfaces_get_local_ips (address_head_t *head, int include_loopback)
   //  ips = g_list_concat (ips, loopbacks);
   //return ips;
  
-  return NULL;
+  return 0;
 }
 #endif //ESP32
 

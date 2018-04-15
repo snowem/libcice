@@ -56,7 +56,7 @@ extern "C" {
 #include "cice/address.h"
 #include "cice/log.h"
 
-struct list_head*
+int
 ice_interfaces_get_local_ips (address_head_t *head, int include_loopback);
 
 #ifdef __cplusplus
