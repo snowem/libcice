@@ -242,7 +242,6 @@ component_set_selected_remote_candidate(agent_t *agent,
   ICE_DEBUG("got remote, remote=%p",remote);
   if (!remote) {
     remote = candidate_copy(candidate);
-    //list_add(&remote->list,&component->remote_candidates.list);
     TAILQ_INSERT_HEAD(&component->remote_candidates, remote, list);
     agent_signal_new_remote_candidate(agent, remote);
   }

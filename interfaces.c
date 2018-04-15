@@ -172,15 +172,15 @@ ice_interfaces_get_local_ips (address_head_t *head, int include_loopback)
 #endif //ESP32
 
 #ifdef USE_ESP32
-struct list_head*
-ice_interfaces_get_local_ips (struct list_head *head, int include_loopback)
+int
+ice_interfaces_get_local_ips (address_head_t *head, int include_loopback)
 {
   address_t *addr = NULL;
   char *addr_string = NULL;
   tcpip_adapter_ip_info_t ip_info;
 
   if (head == NULL) 
-     return NULL;
+     return -1;
   
   ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info));
   ICE_DEBUG("IP Address:  %s\n", ip4addr_ntoa(&ip_info.ip));
@@ -193,7 +193,7 @@ ice_interfaces_get_local_ips (struct list_head *head, int include_loopback)
   addr = address_new();
   if (address_set_from_string(addr, addr_string) == ICE_OK) {
     ICE_DEBUG("add local address, addr=%s",addr_string);
-    list_add(&addr->list,head);
+    TAILQ_INSERT_HEAD(head,addr,list);
   } else {
     ICE_ERROR("failed to parse local address, addr=%s",addr_string);
     address_free(addr);
@@ -202,7 +202,7 @@ ice_interfaces_get_local_ips (struct list_head *head, int include_loopback)
   if (addr_string != NULL)
     free(addr_string);
 
-  return NULL; //FIXME: return list head.
+  return 0; //FIXME: return list head.
 }
 #endif //ESP32
 

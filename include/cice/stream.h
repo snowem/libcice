@@ -53,7 +53,6 @@ extern "C" {
 
 #include "cice/component.h"
 #include "cice/conncheck.h"
-#include "cice/list.h"
 #include "cice/types.h"
 
 

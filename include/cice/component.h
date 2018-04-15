@@ -53,7 +53,6 @@ extern "C" {
 #include <stdint.h>
 
 #include "cice/candidate.h"
-#include "cice/list.h"
 #include "cice/types.h"
 #include "stun/stunagent.h"
 #include "stun/usages/timer.h"

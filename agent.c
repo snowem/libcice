@@ -194,7 +194,6 @@ ice_agent_add_stream(agent_t *agent, uint32_t n_components) {
       ICE_ERROR("failed to create new stream");
       return 0;
    }
-   //list_add(&stream->list,&agent->streams.list);
    TAILQ_INSERT_HEAD(&agent->streams,stream,list);
 
    /*. init components of stream, possibly create pseudo_tcp */
@@ -835,7 +834,6 @@ priv_add_remote_candidate( agent_t *agent, uint32_t stream_id,
       return ICE_ERR;
     }
     candidate = candidate_new(type);
-    //list_add(&candidate->list,&component->remote_candidates.list);
     TAILQ_INSERT_HEAD(&component->remote_candidates,candidate,list);
 
     candidate->stream_id = stream_id;
@@ -1369,7 +1367,6 @@ ice_agent_remove_stream(agent_t *agent, uint32_t stream_id)
   refresh_prune_stream(agent, stream_id);
 
   /* Remove the stream and signal its removal. */
-  //list_del(&stream->list);
   TAILQ_REMOVE(&agent->streams,stream,list);
   {
      stream_t *s = NULL;

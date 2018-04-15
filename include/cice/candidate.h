@@ -58,7 +58,6 @@ extern "C" {
 #endif
 
 #include "cice/address.h"
-#include "cice/list.h"
 #include "cice/types.h"
 
 typedef enum

@@ -494,7 +494,6 @@ candidate_t *discovery_learn_remote_peer_reflexive_candidate(
   /* note: candidate username and password are left NULL as stream 
      level ufrag/password are used */
 
-  //list_add(&candidate->list,&component->remote_candidates.list);
   TAILQ_INSERT_HEAD(&component->remote_candidates,candidate,list);
 
   agent_signal_new_remote_candidate (agent, candidate);
@@ -732,7 +731,6 @@ void discovery_prune_stream(agent_t *agent, uint32_t stream_id)
   TAILQ_FOREACH(cand,&agent->discovery_list,list) {
     if (cand->stream->id == stream_id) {
        ICE_DEBUG("FIXME: free discovery list");
-      //agent->discovery_list = g_slist_remove (agent->discovery_list, cand);
       //discovery_free_item (cand);
     }
   }
@@ -753,7 +751,6 @@ void refresh_prune_stream(agent_t *agent, uint32_t stream_id)
      */
     if (cand->stream->id == stream_id) {
       ICE_DEBUG("FIXME: free refresh list");
-      //agent->refresh_list = g_slist_delete_link (agent->refresh_list, i);
       //refresh_free_item (cand);
     }
 

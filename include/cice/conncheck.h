@@ -55,7 +55,6 @@ extern "C" {
 #include <time.h>
 
 #include "cice/candidate.h"
-#include "cice/list.h"
 #include "cice/log.h"
 #include "cice/types.h"
 #include "cice/stun/constants.h"

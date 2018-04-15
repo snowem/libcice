@@ -54,7 +54,6 @@ extern "C" {
 
 #include "cice/common.h"
 #include "cice/discovery.h"
-#include "cice/list.h"
 #include "cice/types.h"
 #include "cice/stream.h"
 #include "stun/usages/ice.h"

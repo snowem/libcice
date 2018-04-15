@@ -491,7 +491,7 @@ static void priv_add_new_check_pair (agent_t *agent, uint32_t stream_id, compone
   conn_check_insert(&stream->connchecks,pair);
 
   //ICE_DEBUG("conncheck info, size=%u", list_size(&stream->connchecks.list));
-  //XXX: modify connchecks list inside list_for_each? check function 'conn_check_remote_candidates_set'
+  //XXX: modify connchecks list inside TAILQ_FOREACH check function 'conn_check_remote_candidates_set'
   
   ICE_DEBUG("added a new conncheck, agent=%p, pair=%p, foundation=%s, nominated=%u, stream_id=%u", 
          agent, pair, pair->foundation, pair->nominated, stream_id);
@@ -875,8 +875,6 @@ priv_prune_pending_checks(stream_t *stream, uint32_t component_id)
   ICE_DEBUG("Agent XXX: Pruning pending checks, highest_nominated_priority=%lu", highest_nominated_priority);
 
   /* step: cancel all FROZEN and WAITING pairs for the component */
-  //list_for_each(i,&stream->connchecks.list) {
-  //  candidate_check_pair_t *p = list_entry(i,candidate_check_pair_t,list);
   TAILQ_FOREACH(p,&stream->connchecks,list) {
     if (p->component_id == component_id) {
       if (p->state == ICE_CHECK_FROZEN || p->state == ICE_CHECK_WAITING) {
@@ -2885,8 +2883,6 @@ void conn_check_prune_stream(agent_t *agent, stream_t *stream)
 
   ICE_DEBUG("FIXME: freeing conncheck_list of stream, agent=%p,stream=%p", agent, stream);
   if (!TAILQ_EMPTY(&stream->connchecks)) {
-  //  g_slist_free_full (stream->conncheck_list, conn_check_free_item);
-  //  stream->conncheck_list = NULL;
     TAILQ_INIT(&stream->connchecks);
   }
 
