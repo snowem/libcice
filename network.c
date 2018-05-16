@@ -45,6 +45,7 @@
 
 #include <errno.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #include "cice/address.h"
 #include "cice/agent.h"
@@ -255,24 +256,16 @@ tcp_passive_socket_new(agent_t *agent, stream_t *stream,
 
 int
 udp_socket_send(socket_t *sock, const address_t *to, 
-          const char *buf, size_t len)
-{
+          const char *buf, size_t len) {
    int n;
-   //struct sockaddr_in serveraddr;
 
-   if ( sock == NULL || to == NULL ) {
+   if (sock == NULL || to == NULL) {
       ICE_ERROR("null pointer");
       return ICE_ERR;
    }
 
-   //socket_send_messages
-   //ICE_DEBUG("udp_socket_send, fd=%d",sock->fd);
-   //print_address(to); 
-   //HEXDUMP(buf,len,"udp_send");
-
    n = sock->_sendto(sock->fd, buf, len, 0, &to->s.addr, get_address_length(to));
-   //n = sendto(sock->fd, buf, len, 0, &to->s.addr, get_address_length(to));
-   if ( n < 0 ) {
+   if (n < 0) {
       ICE_ERROR("sendto error, ret=%d, fd=%d, len=%lu,",n,sock->fd,len);
       return ICE_ERR;
    }

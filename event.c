@@ -30,6 +30,7 @@
 
 #ifdef USE_LIBEVENT2
 #include <unistd.h>
+#include <fcntl.h>
 #endif
 
 #include "cice/address.h"
@@ -44,6 +45,7 @@ void
 libevent2_init_udp_socket(socket_t *sock) {
   address_t *addr = &sock->addr;
   socklen_t addrlen = 0;
+  int flags = -1;
   int fd;
 
   if (addr->s.addr.sa_family == AF_INET) {
@@ -52,6 +54,7 @@ libevent2_init_udp_socket(socket_t *sock) {
       ICE_ERROR("cannot create udp socket");
        return;
     }
+
     if (bind(fd,&addr->s.addr,sizeof(addr->s.ip4)) < 0) {
        ICE_ERROR("failed to binding ip4");
        return;
@@ -79,7 +82,25 @@ libevent2_init_udp_socket(socket_t *sock) {
     }
     ICE_DEBUG("binding ip6, addrlen=%u,port=%u", addrlen,addr->s.ip4.sin_port);
   }
+
+  flags = fcntl(fd, F_GETFL, 0);
+  if (flags == -1) {
+    close(fd);
+    return;
+  }
+
+  flags = (flags | O_NONBLOCK | O_NDELAY);
+  if (fcntl(fd, F_SETFL, flags) < 0) {
+    close(fd);
+    return;
+  }
+
+  //int optval;
+  //optval = 208*1024;
+  //setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char*) &optval, sizeof(optval));
+
   sock->fd = fd;
+
   return;
 }
 
