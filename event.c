@@ -55,6 +55,14 @@ libevent2_init_udp_socket(socket_t *sock) {
        return;
     }
 
+    { // optimize buffer size
+      int optval = 1024*1024;
+      setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char*) &optval, sizeof(optval));
+      setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const char*) &optval, sizeof(optval));
+      optval = 1;
+      setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (const char*) &optval, sizeof(optval));
+    }
+
     if (bind(fd,&addr->s.addr,sizeof(addr->s.ip4)) < 0) {
        ICE_ERROR("failed to binding ip4");
        return;
@@ -89,15 +97,12 @@ libevent2_init_udp_socket(socket_t *sock) {
     return;
   }
 
-  flags = (flags | O_NONBLOCK | O_NDELAY);
-  if (fcntl(fd, F_SETFL, flags) < 0) {
-    close(fd);
-    return;
+  if ( !(flags & O_NONBLOCK) ) {
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK | O_NDELAY) < 0) {
+      close(fd);
+      return;
+    }
   }
-
-  //int optval;
-  //optval = 208*1024;
-  //setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char*) &optval, sizeof(optval));
 
   sock->fd = fd;
 
