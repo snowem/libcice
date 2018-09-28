@@ -467,8 +467,7 @@ ice_agent_gather_candidates (agent_t *agent, uint32_t stream_id) {
 
          }
       }
-      if (get_local_address);
-        address_free(addr);
+      if (get_local_address) address_free(addr);
    }
   
    stream->gathering = 1;
