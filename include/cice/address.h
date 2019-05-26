@@ -49,11 +49,11 @@
 extern "C" {
 #endif
 
+#include <bsd/bsd.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "cice/common.h"
-#include "cice/bsd_queue.h"
 #include "cice/types.h"
 
 struct _address

@@ -13,10 +13,29 @@ file(GLOB_RECURSE data resources/*)
 add_library(cice SHARED ${sources_top} ${sources_stun} ${sources_stun_usage})
 add_library(cice_static STATIC ${sources_top} ${sources_stun} ${sources_stun_usage})
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindBSD.cmake)
+if (${BSD_FOUND})
+   target_include_directories(cice PUBLIC ${BSD_INCLUDE_DIRS})
+   target_include_directories(cice_static PUBLIC ${BSD_INCLUDE_DIRS})
+   MESSAGE(STATUS "libbsd include: ${BSD_INCLUDE_DIRS}")
+   MESSAGE(STATUS "libbsd lib: ${BSD_LIBRARIES}")
+else ()
+   MESSAGE(FATAL_ERROR LIBBSD not found)
+endif ()
+
+
 target_compile_options(cice PUBLIC -g -Wall -DUSE_LIBEVENT2)
 target_compile_options(cice_static PUBLIC -g -Wall -DUSE_LIBEVENT2)
 target_include_directories(cice PUBLIC include)
 target_include_directories(cice_static PUBLIC include)
+
+target_link_libraries(cice PUBLIC
+  ${BSD_LIBRARIES}
+)
+
+target_link_libraries(cice_static PUBLIC
+  ${BSD_LIBRARIES}
+)
 
 file(COPY ${data} DESTINATION resources)
 
@@ -80,7 +99,7 @@ target_link_libraries(cice PUBLIC
 #  # testing target.
 #  target_compile_definitions(unit_tests PUBLIC UNIT_TESTS)
 #
-#  # This allows us to use the executable as a link library, and inherit all 
+#  # This allows us to use the executable as a link library, and inherit all
 #  # linker options and library dependencies from it, by simply adding it as dependency.
 #  set_target_properties(example PROPERTIES ENABLE_EXPORTS on)
 #
@@ -92,7 +111,7 @@ target_link_libraries(cice PUBLIC
 #  target_include_directories(unit_tests PUBLIC
 #    ${GTEST_INCLUDE_DIRS} # doesn't do anything on linux
 #  )
-#  
+#
 #endif()
 
 ###############################################################################

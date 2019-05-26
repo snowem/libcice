@@ -467,13 +467,12 @@ ice_agent_gather_candidates (agent_t *agent, uint32_t stream_id) {
 
          }
       }
-      if (get_local_address);
-        address_free(addr);
+      if (get_local_address) address_free(addr);
    }
-  
+
    stream->gathering = 1;
    stream->gathering_started = 1; 
-  
+
    for (cid = 1; cid <= stream->n_components; cid++) {
       component_t *component = stream_find_component_by_id(stream, cid);
       candidate_t *c = NULL;
